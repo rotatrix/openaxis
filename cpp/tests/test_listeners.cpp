@@ -4,9 +4,9 @@
 #include "host_fixture.hpp"
 #include <openaxis/connection_manager.hpp>
 #include <openaxis/navigation.hpp>
-#include <ixwebsocket/IXNetSystem.h>
-#include <ixwebsocket/IXGetFreePort.h>
-#include <ixwebsocket/IXWebSocketServer.h>
+#include <openaxis_ixwebsocket/IXNetSystem.h>
+#include <openaxis_ixwebsocket/IXGetFreePort.h>
+#include <openaxis_ixwebsocket/IXWebSocketServer.h>
 #include <condition_variable>
 #include <iostream>
 #include <fstream>
@@ -15,7 +15,7 @@
 #include <thread>
 using namespace openaxis;
 void check(bool condition, const char *message) { if (!condition) throw std::runtime_error(message); }
-void send(ix::WebSocket &socket, const Value &message) {
+void send(openaxis_ix::WebSocket &socket, const Value &message) {
     const auto bytes = Value::to_msgpack(message);
     socket.sendBinary(std::string(bytes.begin(), bytes.end()));
 }
@@ -88,13 +88,13 @@ struct Host : TestHost {
     bool write_camera(const Pose &value) override { camera = value; ++writes; return true; }
 };
 int main() try {
-    ix::initNetSystem();
-    const auto port = ix::getFreePort();
-    ix::WebSocketServer server(port, "127.0.0.1");
+    openaxis_ix::initNetSystem();
+    const auto port = openaxis_ix::getFreePort();
+    openaxis_ix::WebSocketServer server(port, "127.0.0.1");
     std::mutex mutex;
     std::vector<Value> received;
-    server.setOnClientMessageCallback([&](auto, ix::WebSocket &socket, const ix::WebSocketMessagePtr &event) {
-        if (event->type != ix::WebSocketMessageType::Message) return;
+    server.setOnClientMessageCallback([&](auto, openaxis_ix::WebSocket &socket, const openaxis_ix::WebSocketMessagePtr &event) {
+        if (event->type != openaxis_ix::WebSocketMessageType::Message) return;
         const auto m = Value::from_msgpack(event->str);
         { std::lock_guard<std::mutex> lock(mutex); received.push_back(m); }
         if (m["type"] == "hello") send(socket, {{"type", "hello_ack"}, {"proto", "openaxis/1.0"}, {"server_name", "test-peer"}});

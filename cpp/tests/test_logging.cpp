@@ -21,6 +21,7 @@ int main(int argc, char **argv) {
         std::string cmake((std::istreambuf_iterator<char>(cmakeFile)), {});
         std::smatch version;
         assert(std::regex_search(cmake, version, std::regex("project\\(OpenAxis VERSION ([0-9.]+)")));
+        assert(std::string(openaxis::sdk_version).substr(0, std::string(openaxis::sdk_version).find('-')) == version[1]);
         nlohmann::json f; std::ifstream(std::string(OPENAXIS_FIXTURES) + "/logging.json") >> f;
         auto now = std::chrono::system_clock::time_point(std::chrono::milliseconds(f["epoch_ms"].get<long long>()));
         fs::create_directories(root);
@@ -35,7 +36,7 @@ int main(int argc, char **argv) {
           assert(expected == actual);
         }
         { auto r = f["rotation"];
-          auto header_bytes = Log::format_record("info", "OpenAxis SDK 1.0.0 (C++); client=boundary; client_version=unknown").size();
+          auto header_bytes = Log::format_record("info", std::string("OpenAxis SDK ") + openaxis::sdk_version + " (C++); client=boundary; client_version=unknown").size();
           Log boundary("boundary", root, r["max_bytes"].get<std::size_t>() + header_bytes);
           for (int i=0; i<r["writes_before_rotation"].get<int>(); ++i) boundary.write("info", r["message"].get<std::string>());
           assert(fs::file_size(boundary.path()) == r["max_bytes"].get<std::size_t>() + header_bytes);
@@ -45,7 +46,7 @@ int main(int argc, char **argv) {
         }
         Log log("conformance", root);
         { std::ifstream file(log.path()); std::string header; std::getline(file, header);
-          assert(header.find("OpenAxis SDK " + version[1].str() + " (C++)") != std::string::npos); }
+          assert(header.find(std::string("OpenAxis SDK ") + openaxis::sdk_version + " (C++)") != std::string::npos); }
         int mirrors = 0; log.sink = [&](auto &, auto &) { ++mirrors; };
         std::string expected;
         for (const auto &record : f["records"]) {
@@ -101,7 +102,7 @@ int main(int argc, char **argv) {
         log.write("info", "first"); log.write("info", "second");
         for (const auto &path : {log.path(), fs::path(log.path().string() + ".1")}) {
             std::ifstream input(path); std::string header; std::getline(input, header);
-            assert(header.find("OpenAxis SDK 1.0.0 (C++); client=header-test; client_version=2.3.4") != std::string::npos);
+            assert(header.find(std::string("OpenAxis SDK ") + openaxis::sdk_version + " (C++); client=header-test; client_version=2.3.4") != std::string::npos);
         }
     }
     fs::remove_all(root);

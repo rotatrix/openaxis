@@ -6,9 +6,9 @@
 #include <chrono>
 #include <condition_variable>
 #include <iostream>
-#include <ixwebsocket/IXGetFreePort.h>
-#include <ixwebsocket/IXNetSystem.h>
-#include <ixwebsocket/IXWebSocketServer.h>
+#include <openaxis_ixwebsocket/IXGetFreePort.h>
+#include <openaxis_ixwebsocket/IXNetSystem.h>
+#include <openaxis_ixwebsocket/IXWebSocketServer.h>
 #include <map>
 #include <mutex>
 #include <openaxis/connection_manager.hpp>
@@ -22,7 +22,7 @@ void check(bool v, const char *message) {
     if (!v)
         throw std::runtime_error(message);
 }
-void send(ix::WebSocket &ws, const Value &m) {
+void send(openaxis_ix::WebSocket &ws, const Value &m) {
     auto bytes = Value::to_msgpack(m);
     ws.sendBinary(std::string(bytes.begin(), bytes.end()));
 }
@@ -58,24 +58,24 @@ struct EventLoop : Scheduler {
     }
 };
 int main() try {
-    ix::initNetSystem();
-    auto port = ix::getFreePort();
-    ix::WebSocketServer server(port, "127.0.0.1");
+    openaxis_ix::initNetSystem();
+    auto port = openaxis_ix::getFreePort();
+    openaxis_ix::WebSocketServer server(port, "127.0.0.1");
     std::mutex mutex;
     std::vector<Value> received;
     std::atomic<int> connections{0};
     std::atomic<bool> origin_seen{false};
     std::atomic<bool> respond_to_hello{true};
-    server.setOnClientMessageCallback([&](auto, ix::WebSocket &ws,
-                                          const ix::WebSocketMessagePtr &e) {
-        if (e->type == ix::WebSocketMessageType::Open) {
+    server.setOnClientMessageCallback([&](auto, openaxis_ix::WebSocket &ws,
+                                          const openaxis_ix::WebSocketMessagePtr &e) {
+        if (e->type == openaxis_ix::WebSocketMessageType::Open) {
             for (const auto &header : e->openInfo.headers) {
                 auto name=header.first;
                 std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
                 if(name=="origin")origin_seen=true;
             }
         }
-        if (e->type != ix::WebSocketMessageType::Message)
+        if (e->type != openaxis_ix::WebSocketMessageType::Message)
             return;
         auto m = Value::from_msgpack(e->str);
         {

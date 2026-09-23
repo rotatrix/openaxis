@@ -17,10 +17,17 @@ packages do not need a release to match another package's version.
 
 Record the released package versions and validated source commit in the release
 notes. That commit also identifies the conformance fixtures used for validation.
-Use package-specific release tags such as `python/v1.0.1`,
-`typescript/v1.1.0`, `csharp/v1.0.1` and `cpp/v1.0.1`; use `protocol/v1.0.0`
+Use package-specific release tags such as `py/v1.0.1`,
+`ts/v1.1.0`, `cs/v1.0.1` and `cpp/v1.0.1`; use `protocol/v1.0.0`
 for a specification release. Create public tags against the published source
 commit. Published tags and package artifacts are immutable.
+
+An unpublished candidate can keep its version while a release fix is made. Before
+moving its tag, cancel old runs and wait for completion, then verify that no
+package artifact (or C++ GitHub Release) was published. Push the corrected tag
+with a lease against its previous remote object ID. Any successful publication,
+including a partial upload, fixes the tag permanently; subsequent source changes
+require a new version. Rerun transient failures on the same tag without moving it.
 
 ## Prerequisites
 
@@ -32,11 +39,23 @@ commit. Published tags and package artifacts are immutable.
 
 ## Automated checks
 
-The public repository's **SDK packages** GitHub Actions workflow builds one
-selected SDK, tests installation from its package archives, and runs its SDK
-tests. Run it on `master` with **publish unchecked** to validate packaging without
-uploading anything. With publication selected, a separate protected environment
-job uses registry trusted publishing and tags the public commit after success.
+The public repository's **SDK packages** GitHub Actions workflow checks Python,
+TypeScript, C#, and C++ source packages on pushes to `master` and pull requests targeting it.
+It builds archives, tests clean installations, and runs SDK tests. Build summaries
+show package versions, source commits, archive checksums, and the npm dist-tag.
+
+To release, push the selected SDK's tag on a reviewed public commit already on
+`master`. The tag version must match the SDK's checked-in version and built package
+metadata. Python uses its native version spelling, for example `py/v1.0.0rc1`;
+the other SDKs use `ts/v1.0.0-rc.1`, `cs/v1.0.0-rc.1`, or `cpp/v1.0.0-rc.1`.
+Push each tag individually.
+
+The tag run builds and checks only the selected SDK, then waits for environment
+approval in a job named with its package and version. Approval publishes those
+exact artifacts through trusted publishing. C++ builds and tests a source archive
+instead of uploading to a registry. A GitHub Release is created afterward, marked
+as a prerelease for RC versions; C++ attaches its checked source archive.
+Manual workflow runs check one package and cannot publish, even when run on a tag.
 Package installation checks supplement the platform and interactive checks below.
 
 ### TypeScript and documentation

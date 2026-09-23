@@ -11,7 +11,7 @@
     <PackageProjectUrl>https://openaxis.rotatrix.com/</PackageProjectUrl>
     <Authors>Icebound Flame LLC</Authors>
     <Description>OpenAxis 1.0 protocol, client, geometry, and diagnostics SDK.</Description>
-    <PackageLicenseExpression>Elastic-2.0 OR GPL-3.0-only</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
@@ -28,4 +28,11 @@
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
     <None Include="..\..\LEGAL.md" Pack="true" PackagePath="\" />
   </ItemGroup>
+  <!-- NuGet requires .txt/.md for license-file metadata; keep the source license canonical. -->
+  <Target Name="PreparePackageLicense" BeforeTargets="_GetPackageFiles">
+    <Copy SourceFiles="..\..\LICENSE" DestinationFiles="$(IntermediateOutputPath)LICENSE.md" />
+    <ItemGroup>
+      <None Include="$(IntermediateOutputPath)LICENSE.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+  </Target>
 </Project>

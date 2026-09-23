@@ -7,8 +7,8 @@
 #include <chrono>
 #include <climits>
 #include <deque>
-#include <ixwebsocket/IXNetSystem.h>
-#include <ixwebsocket/IXWebSocket.h>
+#include <openaxis_ixwebsocket/IXNetSystem.h>
+#include <openaxis_ixwebsocket/IXWebSocket.h>
 #include <map>
 #include <mutex>
 #include <openaxis/client.hpp>
@@ -39,7 +39,7 @@ struct OpenAxisClient::Impl {
             if (std::find(result.begin(), result.end(), listener) == result.end()) result.push_back(listener);
         return result;
     }
-    ix::WebSocket socket;
+    openaxis_ix::WebSocket socket;
     std::mutex mutex;
     struct Event {
         std::uint64_t epoch;
@@ -85,7 +85,7 @@ struct OpenAxisClient::Impl {
         if (running) {
             if (ready)
                 consider(seconds(last_send) + 1);
-            else if (socket.getReadyState() == ix::ReadyState::Open)
+            else if (socket.getReadyState() == openaxis_ix::ReadyState::Open)
                 consider(seconds(opened) + (verifying ? 10 : options.handshake_timeout));
             for (const auto &entry : pending)
                 if (entry.second.deadline) consider(seconds(*entry.second.deadline));
@@ -109,7 +109,7 @@ struct OpenAxisClient::Impl {
 };
 OpenAxisClient::OpenAxisClient(OpenAxisClientOptions options, std::shared_ptr<OpenAxisListener> listener)
     : impl_(std::make_unique<Impl>(std::move(options), [this] { dispatch_pending(); })) {
-    static const bool initialized = ix::initNetSystem();
+    static const bool initialized = openaxis_ix::initNetSystem();
     if (!initialized)
         throw std::runtime_error("socket initialization failed");
     auto &s = *impl_;
@@ -129,18 +129,18 @@ OpenAxisClient::OpenAxisClient(OpenAxisClientOptions options, std::shared_ptr<Op
     s.socket.disablePerMessageDeflate();
     s.socket.setHandshakeTimeout(static_cast<int>(std::ceil(s.options.handshake_timeout)));
     s.socket.disableAutomaticReconnection();
-    s.socket.setOnMessageCallback([this](const ix::WebSocketMessagePtr &event) {
+    s.socket.setOnMessageCallback([this](const openaxis_ix::WebSocketMessagePtr &event) {
         auto &p = *impl_;
         Value message;
-        bool local = event->type != ix::WebSocketMessageType::Message;
+        bool local = event->type != openaxis_ix::WebSocketMessageType::Message;
         try {
-            if (event->type == ix::WebSocketMessageType::Open)
+            if (event->type == openaxis_ix::WebSocketMessageType::Open)
                 message = {{"type", "_open"}};
-            else if (event->type == ix::WebSocketMessageType::Close)
+            else if (event->type == openaxis_ix::WebSocketMessageType::Close)
                 message = {{"type", "_close"}};
-            else if (event->type == ix::WebSocketMessageType::Error)
+            else if (event->type == openaxis_ix::WebSocketMessageType::Error)
                 message = {{"type", "_error"}, {"message", event->errorInfo.reason}};
-            else if (event->type == ix::WebSocketMessageType::Message) {
+            else if (event->type == openaxis_ix::WebSocketMessageType::Message) {
                 if (!event->binary || event->str.size() > 1024 * 1024)
                     throw std::invalid_argument("expected binary message <= 1 MiB");
                 message = Value::from_msgpack(event->str);
@@ -525,7 +525,7 @@ void OpenAxisClient::dispatch_pending() {
                 continue;
             latest_gesture = p.latest_gesture;
         }
-        if (!e.local && p.socket.getReadyState() != ix::ReadyState::Open)
+        if (!e.local && p.socket.getReadyState() != openaxis_ix::ReadyState::Open)
             continue;
         // A replacement gesture invalidates old UI work as soon as networking
         // receives it, even if the host has not drained the replacement start.
@@ -645,7 +645,7 @@ void OpenAxisClient::dispatch_pending() {
     }
     if (p.ready && now - p.last_send >= std::chrono::seconds(1))
         send({{"type", "heartbeat"}});
-    if (!p.ready && p.socket.getReadyState() == ix::ReadyState::Open &&
+    if (!p.ready && p.socket.getReadyState() == openaxis_ix::ReadyState::Open &&
         now - p.opened >= std::chrono::duration<double>(p.verifying ? 10 : p.options.handshake_timeout))
         p.socket.close(1002, "connection verification timeout");
     std::vector<std::int64_t> expired;

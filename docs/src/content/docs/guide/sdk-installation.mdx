@@ -85,14 +85,16 @@ add_subdirectory(path/to/openaxis/cpp openaxis-build)
 target_link_libraries(my_app PRIVATE OpenAxis::openaxis)
 ```
 
-CMake first looks for installed nlohmann/json 3.11+ and IXWebSocket packages.
-If missing, it fetches the versions pinned in `cpp/CMakeLists.txt`. Set
-`OPENAXIS_FETCH_DEPENDENCIES=OFF` to require preinstalled dependencies for an
-offline or package-managed build.
+CMake looks for installed nlohmann/json 3.11+ and fetches the pinned version if
+missing. Set `OPENAXIS_FETCH_DEPENDENCIES=OFF` and provide nlohmann/json locally
+for an offline build. Linux and macOS also require OpenSSL Crypto; Windows uses
+the system BCrypt library.
 
-The fetched IXWebSocket build defaults to `USE_TLS=OFF`; enable TLS in that
-dependency when your endpoint requires it. The default native endpoint uses
-plaintext loopback. GLFW, OpenGL and ImGui are needed only for the reference demo.
+The SDK includes a private, modified IXWebSocket source tree and builds it
+automatically. It does not use an installed IXWebSocket package. This transport
+supports plaintext `ws://` connections, including the default loopback endpoint;
+TLS and WebSocket compression are disabled. GLFW, OpenGL and ImGui are needed
+only for the reference demo.
 
 After installation, follow the [Navigation integration guide](/guide/navigation-integration/).
 
