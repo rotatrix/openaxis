@@ -43,6 +43,16 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "escaped"):
             release.load(self.root, "a" * 40, "b" * 40, ["python"])
 
+    def test_artifact_root_is_resolved_before_containment_check(self):
+        # Windows runner TEMP may use an alias/junction; an unresolved parent
+        # also exercises the mismatch without requiring symlink privileges.
+        alias = self.root / "python" / ".."
+        self.assertEqual(release.load(alias, "a" * 40, "b" * 40, ["python"]), self.manifest)
+        self.manifest["packages"]["python"]["files"] = {"../outside.whl": "ignored"}
+        release.save(self.root, self.manifest)
+        with self.assertRaisesRegex(RuntimeError, "escaped"):
+            release.load(alias, "a" * 40, "b" * 40, ["python"])
+
     def test_failed_recheck_clears_previous_success(self):
         with patch.object(release, "run", side_effect=RuntimeError("install failed")):
             with self.assertRaises(RuntimeError):

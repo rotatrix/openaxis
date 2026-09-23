@@ -104,6 +104,7 @@ def prepare(repo, root, selected, public, source):
 
 
 def load(root, public, source, selected):
+    root = root.resolve()
     manifest = json.loads((root / "manifest.json").read_text())
     if (manifest["public_commit"], manifest["source_commit"]) != (public, source):
         raise RuntimeError("Artifacts belong to a different public/private revision.")
