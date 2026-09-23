@@ -17,6 +17,10 @@ dependencies = [
     "websockets>=13.0",
 ]
 
+[project.urls]
+Documentation = "https://openaxis.rotatrix.com/"
+Repository = "https://github.com/rotatrix/openaxis"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/openaxis"]
 

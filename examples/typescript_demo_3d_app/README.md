@@ -16,7 +16,7 @@ Open `http://localhost:5188/demos/typescript-demo-3d-app.html`.
 Use `?debug` for SDK debug logging or `?url=ws://127.0.0.1:6607` for another server.
 
 See [shared scene and native controls](../demo_3d_scene/README.md),
-[Navigation walkthrough](https://openaxis.rotatrix.com/guide/navigation-quickstart/)
+[Navigation integration guide](https://openaxis.rotatrix.com/guide/navigation-integration/)
 and [manual demo checks](../ACCEPTANCE.md). Device controls shown in demo help
 describe Rotatrix’s customizable default profiles; the SDK and demo do not own
 those bindings. Check Rotatrix for your active mappings.

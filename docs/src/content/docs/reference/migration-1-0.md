@@ -52,7 +52,7 @@ Earlier unpublished 1.0 drafts also used the old names and require this update.
 See the [Axis Streaming quickstart](/guide/axis-streaming/).
 
 The C++ SDK begins with `openaxis/1.0`; there is no earlier C++ SDK API to migrate.
-Use the [C++ quickstart](/guide/navigation-quickstart/#cpp) for a new native integration.
+Use the [Navigation integration guide](/guide/navigation-integration/) for a new native integration.
 
 For integrations based on earlier 1.0 checkouts, rename `Client` / `ClientOptions`
 to `OpenAxisClient` / `OpenAxisClientOptions`. Move retry configuration, status

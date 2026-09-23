@@ -4,7 +4,7 @@ description: Source boundaries, shared traces, and review invariants for contrib
 ---
 
 This page is for SDK contributors. Integration authors should start with the
-[navigation quickstart](/guide/navigation-quickstart/) and
+[Navigation integration guide](/guide/navigation-integration/) and
 [adapter contracts](/reference/navigation-hosts/).
 
 ## Source boundaries

@@ -24,7 +24,7 @@ export default defineConfig({
   },
   redirects: {
     '/guide/overview/': '/',
-    '/concepts/architecture/': '/guide/navigation-quickstart/#how-the-integration-works',
+    '/concepts/architecture/': '/guide/navigation-integration/#how-the-integration-works',
     '/guide/host-binding/': '/reference/navigation-hosts/',
     '/reference/host-binding/': '/reference/navigation-hosts/',
     '/reference/release-status/': '/reference/language-support/',
@@ -35,14 +35,17 @@ export default defineConfig({
     title: 'OpenAxis',
     social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/rotatrix/openaxis' }],
     description: 'Build application integrations with the OpenAxis SDKs.',
-    components: { Head: './src/components/Head.astro' },
-    customCss: ['./src/styles/docs.css'],
+    components: {
+      Head: './src/components/Head.astro',
+      SiteTitle: './src/components/SiteTitle.astro',
+    },
     sidebar: [
       { label: 'Start here', items: [
         { label: 'Overview', slug: 'index' }, { slug: 'guide/navigation-quickstart' },
+        { slug: 'guide/navigation-integration' },
         { slug: 'guide/axis-streaming' },
       ] },
-      { label: 'Shared integration tasks', items: [
+      { label: 'Common tasks', items: [
         { slug: 'guide/sdk-installation' }, { slug: 'guide/connection-shutdown' },
         { slug: 'guide/dynamic-tags' }, { slug: 'guide/session-logs' },
         { slug: 'guide/reloading-during-development' },
@@ -63,13 +66,14 @@ export default defineConfig({
         { slug: 'experience/settings' },
       ] },
       { label: 'Reference', collapsed: true, items: [
+        { label: 'Protocol specification', link: '/spec/' },
         { label: 'Shared', items: [
         { slug: 'reference/connection-lifecycle' }, { slug: 'reference/language-support' },
         { slug: 'reference/sdk-logging' },
-        { label: 'Protocol specification', link: '/spec/' },
         { slug: 'reference/migration-1-0' },
         ] },
         { label: 'Navigation', items: [
+        { slug: 'reference/navigation-coordination' },
         { slug: 'reference/navigation-hosts' }, { slug: 'reference/diagnostics' },
         { slug: 'reference/diagnostic-events' }, { slug: 'reference/diagnostic-rendering' },
         ] },

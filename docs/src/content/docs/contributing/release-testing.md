@@ -32,6 +32,13 @@ commit. Published tags and package artifacts are immutable.
 
 ## Automated checks
 
+The public repository's **SDK packages** GitHub Actions workflow builds one
+selected SDK, tests installation from its package archives, and runs its SDK
+tests. Run it on `master` with **publish unchecked** to validate packaging without
+uploading anything. With publication selected, a separate protected environment
+job uses registry trusted publishing and tags the public commit after success.
+Package installation checks supplement the platform and interactive checks below.
+
 ### TypeScript and documentation
 
 Install dependencies from the lockfile, run the SDK tests, then build and check

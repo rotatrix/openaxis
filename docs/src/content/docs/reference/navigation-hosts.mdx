@@ -8,7 +8,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 C++ uses the synchronous `NavigationAdapter` contract documented in the [C++ section](#c-host-contract). The language-specific tables below use Python/C#/TypeScript names; the C++ section describes the equivalent scheduler and notification methods.
 
 This reference describes the current public session APIs. For a working starting
-point, use the [navigation quickstart](/guide/navigation-quickstart/).
+point, use the [Navigation integration guide](/guide/navigation-integration/).
 
 An application adapter connects navigation operations to the application's API.
 It implements the SDK's callbacks for capturing a target, answering scene queries,
@@ -163,6 +163,25 @@ Later diagnostic queries must not reset that baseline. TypeScript's initial
 observation method is optional; Python/C# captures should return an unknown
 observation when they cannot supply one.
 
+### Query results and completion
+
+For low-level listeners, a query's `completed` property (`Completed` in C#,
+`completed()` in C++) becomes true when it completes, fails or is retired. A
+completed query counts as handled even if the listener returns false. Completion
+arguments are validated before claiming the query; a transport failure after the
+claim does not reopen it. Responses remain bound to the originating connection,
+so deferred work cannot reply through a later reconnect. Completing or failing a
+query a second time raises an error.
+
+For standard pick facts, a result map with an absent or null `point` is unavailable
+on the wire and allows the next ordered candidate to run. This includes `{}` when
+no diagnostic marker is supplied. Optional `markerPosition` data never changes
+candidate selection and is not transmitted.
+
+Avoid computing picks or other expensive facts before the resolver requests them.
+Do not cache candidate order across queries: later requests can shorten, reorder,
+split, or repeat the requested facts.
+
 ## Object adapter
 
 Supply `object_adapter` in Python or `objectAdapter` in C#/TypeScript to enable object
@@ -216,7 +235,7 @@ configured. Python's async variant awaits this callback.
 results always participate in reconciliation, even without an observation
 callback. In that configuration, the supplied initial `object.pose` fact seeds
 the known pose; the `NavigationSession` does not detect independent native movement before
-an application write. See [reconciliation](/concepts/reconciliation/)
+an application write. See [navigation coordination](/reference/navigation-coordination/)
 for unknown-readback recovery and acknowledgement behavior.
 
 `comparison` and `object_comparison` / `objectComparison` customize meaningful

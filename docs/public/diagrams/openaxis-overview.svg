@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 280" role="img" aria-labelledby="title description">
+  <title id="title">How OpenAxis connects to your application</title>
+  <desc id="description">Device input goes from the Rotatrix device to the Rotatrix desktop app. A bidirectional local WebSocket connects the desktop app directly to the OpenAxis SDK and your integration. The integration reads and updates native application state through the APIs below it.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64575a"/>
+    </marker>
+  </defs>
+  <rect width="840" height="280" rx="8" fill="#faf8f6"/>
+  <g font-family="system-ui, sans-serif" font-size="15" fill="#282122" text-anchor="middle">
+    <rect x="550" y="16" width="274" height="248" rx="8" fill="#f3efec" stroke="#978887"/>
+    <text x="687" y="42" font-weight="600">Your application</text>
+    <g fill="#f1dddc" stroke="#8b1a1e">
+      <rect x="16" y="74" width="138" height="62" rx="6"/>
+      <rect x="248" y="74" width="176" height="62" rx="6"/>
+      <rect x="568" y="74" width="238" height="62" rx="6"/>
+      <rect x="568" y="204" width="238" height="42" rx="6"/>
+    </g>
+    <text x="85" y="111">Rotatrix device</text>
+    <text x="336" y="100">Rotatrix desktop app</text>
+    <text x="336" y="120" font-size="12" fill="#64575a">(OpenAxis server)</text>
+    <text x="687" y="100">OpenAxis SDK</text>
+    <text x="687" y="120">+ your integration</text>
+    <text x="687" y="230">Native application APIs</text>
+    <g stroke="#64575a" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+      <path d="M154 105 H246"/>
+      <path d="M426 105 H566" marker-start="url(#arrow)"/>
+      <path d="M687 138 V202" marker-start="url(#arrow)"/>
+    </g>
+    <g font-size="12" fill="#64575a">
+      <text x="201" y="93">Input</text>
+      <text x="493" y="93">Local WebSocket</text>
+      <rect x="585" y="152" width="204" height="36" fill="#f3efec"/>
+      <text x="687" y="166">Read and update</text>
+      <text x="687" y="182">application state</text>
+    </g>
+  </g>
+</svg>

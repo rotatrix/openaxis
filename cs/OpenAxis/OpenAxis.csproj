@@ -6,6 +6,9 @@
     <AssemblyName>OpenAxis</AssemblyName>
     <Version>1.0.0-rc.1</Version>
     <PackageId>OpenAxis</PackageId>
+    <RepositoryUrl>https://github.com/rotatrix/openaxis</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://openaxis.rotatrix.com/</PackageProjectUrl>
     <Authors>Icebound Flame LLC</Authors>
     <Description>OpenAxis 1.0 protocol, client, geometry, and diagnostics SDK.</Description>
     <PackageLicenseExpression>Elastic-2.0 OR GPL-3.0-only</PackageLicenseExpression>

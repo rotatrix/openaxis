@@ -1,7 +1,10 @@
 ---
 import DefaultHead from '@astrojs/starlight/components/Head.astro';
+import docsStyles from '../styles/docs.css?raw';
 ---
 <DefaultHead {...Astro.props} />
+<!-- Include brand colors before first paint, including during development. -->
+<style is:inline set:html={docsStyles} />
 <script>
   async function renderDiagrams() {
     if (!document.querySelector('pre.mermaid:not([data-processed])')) return;

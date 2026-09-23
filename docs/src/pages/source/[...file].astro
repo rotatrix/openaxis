@@ -9,7 +9,7 @@ const { file } = Astro.props;
 ---
 <StarlightPage frontmatter={{ title: file.path.split('/').at(-1), description: 'Full source from the working OpenAxis demos.', tableOfContents: false }} headings={[]} hasSidebar>
   <div class="sl-markdown-content">
-    <p>{{ python: 'Python demo', typescript: 'TypeScript demo', csharp: 'C# demo', cpp: 'C++ demo' }[file.language]} · <a href="/guide/navigation-quickstart/">Navigation quickstart</a> · <a href={`/examples/${file.path}`}>Raw source</a></p>
+    <p>{{ python: 'Python demo', typescript: 'TypeScript demo', csharp: 'C# demo', cpp: 'C++ demo' }[file.language]} · <a href="/guide/navigation-integration/">Navigation integration guide</a> · <a href={`/examples/${file.path}`}>Raw source</a></p>
     <details><summary>Demo files</summary><ul>{sourceFiles.map(source => <li><a href={sourceLink(source.path)}>{source.path}</a></li>)}</ul></details>
     <nav aria-label="Source symbols"><ul>{file.symbols.map(symbol => <li><a id={symbol.name} href={`#${symbol.name}`}>{symbol.name}</a></li>)}</ul></nav>
     <div data-source-viewer data-symbols={JSON.stringify(file.symbols)}>

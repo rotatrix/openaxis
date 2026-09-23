@@ -16,6 +16,8 @@ camera-local axes for orientation, and viewport coordinates for cursor positions
 Keeping these spaces distinct prevents reversed motion, incorrect pivots and
 aspect-dependent picking errors.
 
+![World axes with camera and geometry positions measured from the same origin. This is an illustrative Z-up world; the application declares its own basis.](/diagrams/world-coordinates.svg)
+
 ## Position and rotation
 
 `t = [x, y, z]` is a world-space position in application scene units. Bounds,
@@ -34,6 +36,8 @@ Camera identity rotation does not mean the application's semantic Front view.
 The camera's semantic axes are right, up, and backward; its forward direction is
 negative backward. A pose describes how those local axes are oriented in the
 application's world. World handedness affects the right axis as shown below.
+
+![Camera-local right, up and backward axes, with forward opposite backward. This example is right-handed; the formulas below account for world handedness.](/diagrams/camera-coordinates.svg)
 
 Let `A = Exp(r)` use the ordinary right-handed numeric
 rotation-vector exponential, and let `h` be `+1` for a right-handed world or `-1`
@@ -91,6 +95,8 @@ that behavior consistently.
 
 `viewport.aspect` is renderable width divided by renderable height, excluding
 toolbars and other surrounding UI.
+
+![Normalized viewport coordinates: center (0, 0), bottom-left (−1, −1), top-right (+1, +1); X increases rightward and Y upward.](/diagrams/viewport-coordinates.svg)
 
 `viewport.cursor` uses normalized coordinates:
 

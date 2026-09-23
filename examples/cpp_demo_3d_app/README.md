@@ -15,7 +15,7 @@ generator places it at `cpp/build/demo/openaxis_demo`. The build copies
 another scene file. Add `--debug` for per-frame write logs.
 
 See [shared scene and native controls](../demo_3d_scene/README.md),
-[Navigation walkthrough](https://openaxis.rotatrix.com/guide/navigation-quickstart/)
+[Navigation integration guide](https://openaxis.rotatrix.com/guide/navigation-integration/)
 and [manual demo checks](../ACCEPTANCE.md). Device controls shown in demo help
 describe Rotatrix’s customizable default profiles; the SDK and demo do not own
 those bindings. Check Rotatrix for your active mappings.

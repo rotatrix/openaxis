@@ -24,6 +24,16 @@ Run the demo, press **D**, then navigate over a cube and empty space. Click to
 select a cube and repeat. Compare reported hits and bounds with the scene. A green
 marker shows the server-supplied pivot using the [shared disc appearance](/experience/pivots-diagnostics/#pivot-marker-appearance).
 
+![C++ demo diagnostics showing a 2D crosshair at the picked screen position, a 3D crosshair at the surface hit on a green cube, and the matching yellow pick.cursor result row.](/screenshots/cpp-pick-diagnostics.png)
+
+In this C++ demo capture, the 2D crosshair marks the screen position picked,
+while the 3D crosshair marks the surface hit. The matching yellow `pick.cursor`
+diagnostic row reports the hit's world-space position and
+the hit object's bounds, and identifies it as the returned candidate.
+`pick.viewport_center` is skipped because an earlier candidate supplied a result.
+These crosshairs visualize the pick; the server-chosen pivot is displayed
+separately as a green disc.
+
 Repeat with the cursor outside the viewport and with tall and wide windows.
 Diagnostics identify evaluated alternatives; a skipped alternative needs a
 separate query or resolver test.
@@ -37,28 +47,16 @@ requested facts lazily, stopping ordered alternatives at the first available res
 Capture live state on the thread required by the application API. Let the SDK
 complete the correlated response; do not send a second response from the adapter.
 
-For low-level listeners, a query's `completed` property (`Completed` in C#,
-`completed()` in C++) becomes true when it completes, fails or is retired. A
-completed query counts as handled even if the listener returns false. Completion
-arguments are validated before claiming the query; a transport failure after the
-claim does not reopen it. Responses remain bound to the originating connection,
-so deferred work cannot reply through a later reconnect. Completing or failing a
-query a second time raises an error.
-
-For standard pick facts, a result map with an absent or null `point` is unavailable
-on the wire and allows the next ordered candidate to run. This includes `{}` when
-no diagnostic marker is supplied. Optional `markerPosition` data never changes
-candidate selection and is not transmitted.
-
-Avoid computing picks or other expensive facts before the resolver requests them.
-Do not cache candidate order across queries: later requests can shorten, reorder,
-split, or repeat the requested facts.
+Resolve a pick only when requested and return an unavailable result when there
+is no hit. This lets Rotatrix try another source for the pivot. See the
+[query result and completion contract](/reference/navigation-hosts/#query-results-and-completion)
+for exact result values and low-level listener behavior.
 
 <Tabs syncKey="sdk-language">
 <TabItem label="Python">
 
 The `NavigationSession` calls `MyQueryCapture.resolve(self, name)` with a requested fact name.
-The [quickstart's query overview](/guide/navigation-quickstart/#answering-scene-queries)
+The [integration guide's query overview](/guide/navigation-integration/#answering-scene-queries)
 shows how its constructor saves `self.app`, `self.camera`, viewport dimensions and
 cursor. The resolver uses that saved state to answer each request.
 `bounds_value()` converts application bounds to minimum and maximum world-space

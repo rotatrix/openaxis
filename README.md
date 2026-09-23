@@ -4,6 +4,10 @@ OpenAxis connects Rotatrix input to your application over a local WebSocket
 connection. This repository contains the protocol specification, SDKs for Python,
 C#, TypeScript and C++, and runnable integration examples.
 
+[![Rotatrix controlling the demo application's camera](docs/public/videos/navigation-preview.gif)](https://openaxis.rotatrix.com/)
+
+[Watch the full demo](https://openaxis.rotatrix.com/).
+
 The Rotatrix server handles device input and the user's navigation profile. Your
 integration connects through an SDK and applies input to your application's native
 APIs. It can receive server-computed camera and object poses through Navigation,

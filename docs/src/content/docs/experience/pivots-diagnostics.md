@@ -14,6 +14,13 @@ object pivots. This page is the shared SDK guidance for pivot presentation,
 including depth behavior and lifecycle; these are not wire-protocol fields.
 Pose application must not depend on the ability to render the marker.
 
+![A lime-green pivot disc with a black rim on a cube, partially occluded by the cube's surface.](/screenshots/pivot-partially-occluded.png)
+
+The cube's surface partially occludes this pivot marker. The exposed portion
+remains opaque, while the portion behind the surface is faintly visible.
+Depth testing applies to each fragment of the disc and rim, so the marker can
+intersect geometry without fading as a whole.
+
 | Property | Recommended appearance |
 | --- | --- |
 | Fill | Lime green, RGB `(0, 255, 0)`; opaque where visible |

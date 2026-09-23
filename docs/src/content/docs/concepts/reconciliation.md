@@ -1,156 +1,110 @@
 ---
 title: Reconciling navigation
-description: How observations, realized poses, corrections, acknowledgements, and queued output keep navigation synchronized.
+description: How the SDK keeps Rotatrix navigation aligned with native input and application constraints.
 ---
 
-The server sends absolute target poses. The application may realize a different
-pose because of native input, snapping, limits, collisions, or numerical
-normalization. Reconciliation keeps the server's model aligned with that result.
-
-`NavigationSession` compares requested poses with observations from the application.
-When a meaningful difference appears, it sends a correction to the server and
-waits for acknowledgement before applying output that depends on that correction.
-This prevents the next navigation update from undoing native input or constraints.
+The server sends target camera or object poses, but the application may end up
+elsewhere. A native mouse gesture can move the camera, or snapping, limits and
+collisions can constrain a requested position. Reconciliation tells Rotatrix
+about the actual result so subsequent navigation continues from that state.
 
 ## Requested, observed, and realized poses
 
-These values have different meanings:
-
-- **Requested pose:** what the server asked the application to apply.
-- **Observation:** a pose actually read from the application.
+- **Requested pose:** what Rotatrix asked the application to apply.
+- **Observation:** a pose read from the application.
 - **Realized pose:** an observation after a successful native write.
 
-`NavigationSession`'s comparison policy decides which differences matter. A native
-camera representation can change without changing the visible view. The
-integration should express that equivalence in its comparison or conversion,
-rather than sending endless corrections for an invisible difference.
+Your integration supplies observations and write results. The SDK's
+NavigationSession compares them with the requested movement and handles
+corrections to Rotatrix.
 
 ## A normal correction
 
-Suppose the server requests object position `8`, but the application's constraint
+Suppose Rotatrix requests object position `8`, but an application constraint
 limits it to `5`:
 
-1. The application applies the request and reports the actual position `5`.
-2. `NavigationSession` sends `object.delta` with translation `-3` and a correction ID.
-3. The object stream waits for output whose `applied_delta_id` acknowledges that ID.
-4. The acknowledged pose is evaluated against the current observation before
-   any further native write.
+1. The integration applies the request and reports the actual position, `5`.
+2. The SDK reports the difference, `-3`, to Rotatrix.
+3. The SDK waits for Rotatrix to acknowledge the correction before applying
+   output that depends on it.
+4. Navigation continues from the application's actual state.
 
-The same correction mechanism handles independent native movement and a constrained
-write. Camera and object correction barriers are independent: an object barrier
-does not block camera output, and a camera acknowledgement cannot clear it.
+```mermaid
+sequenceDiagram
+    participant R as Rotatrix server
+    participant S as SDK NavigationSession
+    participant A as Your integration
+    participant H as Application APIs
+    R->>S: Request object position 8
+    S->>A: Apply requested pose
+    A->>H: Set position to 8
+    Note over H: Constraint limits position to 5
+    H-->>A: Read back actual position 5
+    A-->>S: Write succeeded, realized position 5
+    S->>R: Correction -3, with correction ID
+    Note over S: Wait before applying dependent output
+    R->>S: Object pose acknowledging correction ID
+    S->>A: Observe current pose
+    A->>H: Read position
+    H-->>A: Current position
+    A-->>S: Current observation
+    Note over S: Compare before applying further movement
+```
 
-## Correction barriers
+The acknowledgement arrives on a subsequent object pose. The SDK checks it
+against the current observation before writing again; if they already match,
+no additional native write is needed.
 
-The SDK uses at most one identified correction in flight per target and gesture.
-This is its coordination strategy, not a protocol limit on how many delta IDs an
-independent client may send. A successful WebSocket send is not acknowledgement:
-the SDK waits for a server pose whose `applied_delta_id` includes the pending ID.
+The same process handles movement from native input. Your integration reports
+what happened; the SDK keeps older navigation output from undoing that change.
 
-While waiting, retain the observation associated with that correction and
-coalesce subsequent native movement against it. Once acknowledged, send at most
-one follow-up correction for accumulated movement. The watermark persists in
-later server poses; it is not a new acknowledgement after the pending barrier
-has cleared. Hold or discard older output rather than applying it over newer
-native input, retaining at most the newest pending pose.
+## What your integration provides
 
-Clear pending correction state on gesture end, cancellation, disconnection,
-or a matching send failure. When a final pose and gesture end are coalesced,
-preserve a newer application observation or an unacknowledged correction.
+Read and write poses on the application's permitted thread. Return the pose
+actually realized after a write and notify the session when native input changes
+the camera or object. Configure observation callbacks for the targets whose
+independent movement you need to track. The [concurrent input recipe](/guide/concurrent-input/)
+shows the wiring; the [adapter reference](/reference/navigation-hosts/#writes-and-observations)
+defines when camera and object observations participate.
 
-## Native observations and equivalence
-
-For a custom coordinator, retain the most recently observed or realized pose.
-Before applying newer output, or after native input, read the actual pose and
-compute translation as observed minus retained position and rotation as observed
-orientation multiplied by the inverse retained orientation. Send these increments
-as deltas and advance the baseline so the same movement is not reported twice.
-For orthographic scale changes, the increment is observed extent divided by
-retained extent. Use absolute rebases for discontinuities, not repeated rebases
-for ordinary concurrent input.
-
-Treat native change notifications as dirty signals and read on the application's
-required thread instead of polling every output frame when notifications are
-available. Suppress synchronous notifications from your own setter; compare
-later notifications against retained readback. Retain the pose actually realized
-after a write, not just its requested value. If an acknowledging pose is already
-equivalent to that observation, no additional native write is needed.
-
-Apply suitable comparison tolerances and correction rate limits to prevent
-native quantization from feeding back indefinitely. An orthographic host may
-normalize eye/target depth without changing the image: its comparison/conversion
-policy can ignore that axial normalization while retaining view-plane movement.
-This does not change the protocol's translation semantics. Applications without
-reliable readback or change notifications need not implement concurrent-input
-correction. See [concurrent input](/guide/concurrent-input/) for SDK wiring.
+Only meaningful differences should cause corrections. For example, a native
+camera may normalize its representation without changing the visible view.
+Use the SDK's comparison options to express that equivalence and avoid repeated
+corrections for invisible changes.
 
 ## Unknown readback
 
-A successful setter can be followed by an unavailable read. The adapter reports
-success with an unknown realized pose, preserving the distinction between a
-completed write and knowledge of its result.
+A setter can succeed even when the resulting pose cannot be read. Report success
+with an unknown result in that case. When observations resume, the SDK can
+compare the actual pose with the last successful request and correct any
+difference. This recovery requires an observation to become available.
 
-`NavigationSession` clears its observed baseline and separately retains the last
-successful request. When observation becomes available again:
-
-- If it matches the request, it becomes the observed baseline.
-- If it differs significantly, the `NavigationSession` sends the usual correction.
-- If the camera projection changed, it uses the rebase mechanism below.
-
-For example, request `20`, successful write, unknown readback, then observation
-`22` produces a correction of `+2`. A second successful unknown write to `25`
-replaces the recovery reference: an eventual observation of `27` still produces
-`+2`, not `+7`. Gesture/connection retirement clears that reference.
-
-An unavailable read before any successful write simply provides no observation.
-The next frame can try again. No special concurrent-correction mode is required.
-
-This recovery path requires an actual observation to become available. Without
-a camera observation callback, the coordinator cannot detect native camera
-movement; see the [adapter contract](/reference/navigation-hosts/#writes-and-observations).
+See [readback recovery](/reference/navigation-coordination/#unknown-readback)
+for the exact baseline rules.
 
 ## Projection changes
 
-A change between perspective and orthographic projection, or another projection
-discontinuity detected by the comparison policy, cannot be described by a rigid
-camera delta alone. `NavigationSession` sends:
+Switching between perspective and orthographic views changes more than the
+camera's position and orientation. The SDK reports the new camera and projection
+and waits for acknowledgement before continuing dependent output. Keep the
+reported projection consistent with the rendered view.
 
-1. An absolute `camera.pose` containing the observed camera and projection.
-2. An identity `camera.delta` with an ID, establishing an acknowledgement barrier.
-
-The existing `applied_delta_id` releases that barrier. A matching pose alone is
-not proof that the server has consumed the rebase.
+See [projection changes](/reference/navigation-coordination/#projection-changes)
+for the message sequence.
 
 ## Skipping and retaining work
 
-When input arrives faster than the application can apply it, retaining the newest
-pose avoids replaying a backlog of outdated movement. Other work, such as queries
-and pivot changes, keeps its place in the ordering.
-
-Observation and acknowledgement processing happen before duplicate suppression.
-An unchanged request can skip the native setter when it matches the current or
-last known realized pose. The separately retained request after unknown readback
-is never eligible as a known realization.
-
-Each stream keeps its newest pending pose. `max_work` / `maxWork` bounds non-pose
-work; up to one camera pose and one object pose occupy additional slots. A
-replacement is appended at its new arrival position, so it cannot overtake an
-intervening query or pivot. An older pose released from a pivot wait cannot
-replace a newer pending pose.
-
-Gesture end drains eligible final work, then cleans up. Cancellation or a new
-gesture invalidates old work. Neither path authorizes a write to a replacement
-viewport or target.
+If input arrives faster than the application can apply it, the SDK retains the
+newest pending pose instead of replaying a backlog. Queries and pivot changes
+retain their ordering. Closing or replacing a target invalidates work for it;
+queued output must never affect a replacement viewport or object.
 
 ## Failure boundaries
 
-A failed native write, failed correction send, acknowledgement timeout, or
-invalid bound context cancels the gesture. Diagnostic and pivot-rendering
-failures are passive: they must not turn a committed write into a failure.
+A failed native write or invalid target cancels the gesture. Optional pivot
+rendering and diagnostics stay separate from whether a pose was successfully
+applied. Keep application-specific timeouts around remote native operations.
 
-Async camera coordination preserves the same checks around awaited operations,
-but cannot retract a native write already issued remotely. Application-level operation
-timeouts remain the integration's responsibility.
-
-See [adapter contracts](/reference/navigation-hosts/) for the observation
-and write-result APIs, including when each stream enables reconciliation.
+The [navigation coordination reference](/reference/navigation-coordination/)
+covers correction barriers, custom-coordinator calculations, queue limits and
+exact failure behavior.

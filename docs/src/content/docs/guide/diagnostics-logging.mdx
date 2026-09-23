@@ -74,6 +74,17 @@ cpp/build/demo/Release/openaxis_demo.exe --debug
 
 ### Understand the results
 
+![C++ demo diagnostic overlay showing query facts, timings, a returned pick.cursor hit on a cube, and a skipped viewport-center pick.](/screenshots/cpp-pick-diagnostics.png)
+
+In this capture, the yellow `pick.cursor` row reports a hit and identifies it as
+the returned candidate. The 2D crosshair marks the screen position picked;
+the 3D crosshair marks the resulting surface position.
+The selection-only picks missed, while `pick.viewport_center` was skipped after
+an earlier candidate supplied a result. The header identifies the gesture and
+query, and the timings show how long the query and individual facts took.
+“Returned candidate” confirms what the client sent, not which pivot the server
+ultimately chose.
+
 | Result | Meaning |
 | --- | --- |
 | **Unknown readback** | The write succeeded, but the application did not return its resulting pose. |

@@ -1,0 +1,11 @@
+---
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a class="site-title brand-lockup" href={siteTitleHref} aria-label={`${siteTitle} by Rotatrix — documentation home`}>
+  <span class="brand-name" translate="no">{siteTitle}</span>
+  <span class="brand-credit" aria-hidden="true">
+    <span>by</span>
+    <span class="rotatrix-wordmark"></span>
+  </span>
+</a>

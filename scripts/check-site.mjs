@@ -19,7 +19,7 @@ for (const file of ['OpenAxisDemo.csproj', 'Program.cs', 'MyApplication.cs', 'My
     errors.push(`Missing C# demo 3D app file: ${file}`);
   }
 }
-for (const path of ['guide/navigation-quickstart', 'guide/connection-shutdown', 'guide/dynamic-tags', 'guide/picking-pivots',
+for (const path of ['guide/navigation-integration', 'guide/connection-shutdown', 'guide/dynamic-tags', 'guide/picking-pivots',
   'guide/concurrent-input', 'guide/object-manipulation', 'guide/diagnostics-logging',
   'guide/axis-streaming', 'guide/asynchronous-hosts', 'reference/navigation-hosts',
   'reference/connection-lifecycle', 'reference/language-support']) {

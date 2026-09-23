@@ -2,6 +2,12 @@
   "name": "@openaxis/sdk",
   "version": "1.0.0-rc.1",
   "description": "TypeScript SDK for the OpenAxis 1.0 input protocol",
+  "homepage": "https://openaxis.rotatrix.com/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rotatrix/openaxis.git",
+    "directory": "ts/sdk"
+  },
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",

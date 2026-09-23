@@ -1,5 +1,108 @@
-:root { --sl-content-width: 52rem; }
+/* Rotatrix's burgundy and warm neutrals, adapted for long-form documentation. */
+:root {
+  --sl-content-width: 52rem;
+  --sl-color-accent-low: #3e1b20;
+  --sl-color-accent: #e99a9d;
+  --sl-color-accent-high: #f3bec0;
+  --sl-color-white: #faf7f5;
+  --sl-color-gray-1: #eee8e5;
+  --sl-color-gray-2: #cec3bf;
+  --sl-color-gray-3: #a99a95;
+  --sl-color-gray-4: #756762;
+  --sl-color-gray-5: #443a37;
+  --sl-color-gray-6: #2b2422;
+  --sl-color-black: #1d1817;
+  --sl-color-bg-nav: #241e1c;
+  --sl-color-bg-sidebar: #241e1c;
+  --sl-line-height: 1.7;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #f1dddc;
+  --sl-color-accent: #8b1a1e;
+  --sl-color-accent-high: #76161a;
+  --sl-color-white: #0e0a0a;
+  --sl-color-gray-1: #282122;
+  --sl-color-gray-2: #403638;
+  --sl-color-gray-3: #64575a;
+  --sl-color-gray-4: #978887;
+  --sl-color-gray-5: #cec3bf;
+  --sl-color-gray-6: #e9e3df;
+  --sl-color-gray-7: #f3efec;
+  --sl-color-black: #faf8f6;
+  --sl-color-bg-nav: #e9e3df;
+  --sl-color-bg-sidebar: #f3efec;
+}
+
+.site-title {
+  color: var(--sl-color-text-accent);
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+h1 {
+  color: var(--sl-color-text-accent);
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+.sl-markdown-content :is(h2, h3) {
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.sidebar-content summary .large {
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.sl-markdown-content :is(video, img) {
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: .5rem;
+}
+
+.sl-markdown-content th {
+  background: var(--sl-color-bg-sidebar);
+}
+
+.sl-markdown-content a {
+  text-underline-offset: .2em;
+}
 /* Neutral diagram colors remain legible under either documentation theme. */
 pre.mermaid { background: #fff; color: #17212b; padding: 1rem; overflow-x: auto; border-radius: .5rem; }
 /* Preserve readable labels; narrow screens can scroll the sequence horizontally. */
 pre.mermaid svg { height: auto; min-width: 70rem; }
+
+/* Keep the complete header lockup styled before first paint. */
+.brand-lockup {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: .845rem;
+  width: fit-content;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.brand-name { font-size: 1.625rem; line-height: 1; }
+.brand-credit {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: .39rem;
+  font-size: .89375rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--sl-color-gray-3);
+}
+.rotatrix-wordmark {
+  display: inline-block;
+  width: 5.2rem;
+  height: .975rem;
+  /* Align the lettering, accounting for space below it in the SVG. */
+  transform: translateY(.195rem);
+  background: var(--sl-color-text-accent);
+  mask: url('/brand/rotatrix-wordmark.svg') center / contain no-repeat;
+}
