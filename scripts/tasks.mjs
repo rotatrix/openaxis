@@ -58,7 +58,7 @@ export function pythonSetup(tests = false) {
   ];
 }
 const cppConfigure = (demo) => ['Configure C++', 'cmake', ['-S', 'cpp', '-B', 'cpp/build',
-  '-DOPENAXIS_BUILD_TESTS=ON', `-DOPENAXIS_BUILD_DEMO=${demo ? 'ON' : 'OFF'}`, '-DCMAKE_BUILD_TYPE=Release',
+  '-DOPENAXIS_BUILD_TESTS=ON', '-DOPENAXIS_WARNINGS_AS_ERRORS=ON', `-DOPENAXIS_BUILD_DEMO=${demo ? 'ON' : 'OFF'}`, '-DCMAKE_BUILD_TYPE=Release',
   ...(process.platform === 'linux' ? ['-DGLFW_BUILD_WAYLAND=OFF'] : [])]];
 
 export function buildSteps(language = 'all') {

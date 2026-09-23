@@ -626,7 +626,14 @@ class NavigationSession(OpenAxisListener):
     def _timeout(self, token, delta_id, *, state=None):
         state = self._state if state is None else state
         with self._lock:
-            effect = state.expire(token, delta_id, self.clock())
+            if not state.current(token) or state.pending_id != delta_id or state.deadline is None:
+                return
+            now = self.clock()
+            deadline = state.deadline if now < state.deadline else None
+            effect = state.expire(token, delta_id, now)
+        if deadline is not None:
+            self.scheduler.post_at(deadline, lambda: self._timeout(token, delta_id, state=state))
+            return
         self._effect(effect, state=state)
 
     def drain(self):

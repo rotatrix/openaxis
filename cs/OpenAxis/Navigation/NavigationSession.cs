@@ -658,7 +658,20 @@ namespace OpenAxis.Navigation
         private void Timeout(SessionToken token, long deltaId, bool objects)
         {
             SessionEffect effect;
-            lock (_gate) effect = (objects ? _objects : _state).Expire(token, deltaId, _clock());
+            double? deadline;
+            lock (_gate)
+            {
+                var state = objects ? _objects : _state;
+                if (!state.Current(token) || state.PendingId != deltaId || !state.Deadline.HasValue) return;
+                var now = _clock();
+                deadline = now < state.Deadline.Value ? state.Deadline : null;
+                effect = state.Expire(token, deltaId, now);
+            }
+            if (deadline.HasValue)
+            {
+                _scheduler.PostAt(deadline.Value, () => Timeout(token, deltaId, objects));
+                return;
+            }
             Publish(effect, objects);
         }
 

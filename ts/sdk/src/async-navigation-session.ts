@@ -340,16 +340,21 @@ export class AsyncNavigationSession<C = unknown, O = unknown> implements OpenAxi
         this.send?.(stream === this.object
           ? { type: "object.delta", gesture_id: effect.gestureId!, delta_id: effect.deltaId, t: d.t, r: d.r }
           : { type: "camera.delta", gesture_id: effect.gestureId!, delta_id: effect.deltaId, t: d.t, r: d.r, ...(d.scale === undefined ? {} : { ortho_extent_scale: d.scale }) });
-        if (stream.state.deadline !== undefined) {
-          const timer = setTimeout(() => {
-            this.timers.delete(timer);
-            this.effect(stream, stream.state.expire(token, effect.deltaId!, this.clock()));
-          }, Math.max(1, Math.ceil((stream.state.deadline - this.clock()) * 1000)));
-          this.timers.add(timer);
-        }
+        this.armTimeout(stream, token, effect.deltaId!);
       } catch { this.effect(stream, stream.state.sendFailed(token, effect.deltaId!)) }
     }
     this.wake();
+  }
+  private armTimeout(stream: Stream, token: Token, deltaId: OpenAxisInteger): void {
+    if (!stream.state.current(token) || stream.state.pendingId !== deltaId || stream.state.deadline === undefined) return;
+    const timer = setTimeout(() => {
+      this.timers.delete(timer);
+      if (!stream.state.current(token) || stream.state.pendingId !== deltaId || stream.state.deadline === undefined) return;
+      const now = this.clock();
+      if (now < stream.state.deadline) this.armTimeout(stream, token, deltaId);
+      else this.effect(stream, stream.state.expire(token, deltaId, now));
+    }, Math.max(1, Math.ceil((stream.state.deadline - this.clock()) * 1000)));
+    this.timers.add(timer);
   }
   private async drain(): Promise<void> {
     try {

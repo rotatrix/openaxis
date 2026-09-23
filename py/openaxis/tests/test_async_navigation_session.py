@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from unittest.mock import Mock
 
 import msgpack
 
@@ -239,6 +240,32 @@ class AsyncSessionTests(unittest.IsolatedAsyncioTestCase):
         await self.idle()
         self.assertEqual(self.adapter.writes, [])
         self.assertTrue(any(m.get("reason") == "camera_delta_timeout" for m in self.socket.messages))
+
+    async def test_early_timeout_is_rearmed(self):
+        self.adapter.camera = pose(5)
+        self.session.on_camera_pose(pose(1, 1))
+        await self.idle()
+        state = self.session._state
+        for handle in self.session._timers:
+            handle.cancel()
+        self.session._timers.clear()
+        loop = self.session._loop
+        fake = Mock(wraps=loop)
+        callbacks = []
+        fake.time.return_value = state.deadline - .001
+        fake.call_at.side_effect = lambda deadline, callback: (callbacks.append(callback), Mock())[1]
+        self.session._loop = fake
+        try:
+            self.session._arm_timeout(state.token, state.pending_id)
+            callbacks.pop(0)()
+            self.assertEqual(len(callbacks), 1)
+            self.assertIsNotNone(state.gesture_id)
+            fake.time.return_value = state.deadline
+            callbacks.pop(0)()
+            self.assertIsNone(state.gesture_id)
+            self.assertFalse(callbacks)
+        finally:
+            self.session._loop = loop
 
     async def test_delayed_query_superseded(self):
         entered, release = asyncio.Event(), asyncio.Event()

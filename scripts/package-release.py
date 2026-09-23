@@ -251,7 +251,7 @@ console.log('Four public entry points and TypeScript declarations passed', clien
                 archive.extractall(work, filter="data")
             # The SDK's test executables use assert; keep assertions enabled.
             run(["cmake", "-S", work / "cpp", "-B", work / "out", "-DCMAKE_BUILD_TYPE=Debug",
-                 "-DOPENAXIS_BUILD_TESTS=ON", "-DOPENAXIS_BUILD_DEMO=OFF"], work)
+                 "-DOPENAXIS_BUILD_TESTS=ON", "-DOPENAXIS_BUILD_DEMO=OFF", "-DOPENAXIS_WARNINGS_AS_ERRORS=ON"], work)
             run(["cmake", "--build", work / "out", "--config", "Debug", "--parallel", "2"], work)
             run(["ctest", "--test-dir", work / "out", "-C", "Debug", "--output-on-failure"], work)
         else:

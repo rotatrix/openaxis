@@ -232,6 +232,11 @@ int main() try {
         s.native_object_changed();
         scheduler.drain();
         check(sent.back()["type"] == "object.delta", "object notification correction missing");
+        scheduler.now = .5;
+        auto early = std::move(scheduler.jobs.begin()->second);
+        scheduler.jobs.erase(scheduler.jobs.begin());
+        early();
+        check(s.active() && !scheduler.jobs.empty(), "early timeout was not rearmed");
         scheduler.now = 1;
         scheduler.drain();
         check(sent.back()["type"] == "motion_cancel", "deadline did not cancel without polling");

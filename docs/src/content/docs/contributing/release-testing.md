@@ -112,7 +112,7 @@ This project is a console test harness; its checks run through `dotnet run`.
 Configure and build the SDK test targets, then run CTest:
 
 ```sh
-cmake -S cpp -B cpp/build -DOPENAXIS_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake -S cpp -B cpp/build -DOPENAXIS_BUILD_TESTS=ON -DOPENAXIS_WARNINGS_AS_ERRORS=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build cpp/build --config Release
 ctest --test-dir cpp/build -C Release --output-on-failure --no-tests=error
 ```
@@ -120,6 +120,12 @@ ctest --test-dir cpp/build -C Release --output-on-failure --no-tests=error
 CMake can fetch pinned dependencies when they are unavailable locally. Use a fresh
 build directory when switching compiler or architecture. These commands cover
 SDK tests; the native reference viewer has separate build and interaction checks.
+
+Development tasks and package validation enable `OPENAXIS_WARNINGS_AS_ERRORS`.
+It applies to the SDK and public test targets, including public-header compilation
+in those tests. The CMake option defaults to `OFF` for source consumers and does
+not propagate to application targets, demos, vendored dependencies or the private
+verification harness.
 
 ## Platform coverage
 

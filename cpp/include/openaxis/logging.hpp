@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #ifdef _WIN32
 #include <io.h>
+#include <share.h>
 #include <sys/stat.h>
 #else
 #include <unistd.h>
@@ -40,10 +41,25 @@ class DiagnosticLog {
     std::string error_;
     std::uintmax_t max_bytes_;
     std::string header_;
-    static std::string env(const char *name) { auto p = std::getenv(name); return p ? p : ""; }
+    static std::string env(const char *name) {
+#ifdef _WIN32
+        char *value = nullptr;
+        std::size_t size = 0;
+        const auto result = _dupenv_s(&value, &size, name);
+        std::unique_ptr<char, decltype(&std::free)> owned(value, &std::free);
+        return result == 0 && owned ? std::string(owned.get()) : "";
+#else
+        auto p = std::getenv(name);
+        return p ? p : "";
+#endif
+    }
     static int open_file(const Path &p, bool create) {
 #ifdef _WIN32
-        return _wopen(p.c_str(), _O_RDWR | _O_BINARY | (create ? _O_CREAT | _O_EXCL : 0), _S_IREAD | _S_IWRITE);
+        int fd = -1;
+        const auto result = _wsopen_s(&fd, p.c_str(),
+            _O_RDWR | _O_BINARY | (create ? _O_CREAT | _O_EXCL : 0),
+            _SH_DENYNO, _S_IREAD | _S_IWRITE);
+        return result == 0 ? fd : -1;
 #else
         return ::open(p.c_str(), O_RDWR | (create ? O_CREAT | O_EXCL : 0), 0600);
 #endif

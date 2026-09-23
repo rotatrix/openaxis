@@ -100,7 +100,10 @@ public sealed partial class MyApplication
         bool focused = Raylib.IsWindowFocused();
         if (focused != IsActive) { IsActive = focused; if (!focused) EndDrag(); FocusChanged(); }
         var mouse = Raylib.GetMousePosition(); var pixel = new Point(mouse.X, mouse.Y);
-        Cursor = focused && Raylib.IsCursorOnScreen() ? pixel : null;
+        // Use the same coordinates as click picking. The cursor-enter callback
+        // behind IsCursorOnScreen can be stale even while mouse input works.
+        Cursor = focused && pixel.X >= 0 && pixel.X < ViewWidth
+            && pixel.Y >= 0 && pixel.Y < ViewHeight ? pixel : null;
         if (!focused) return;
         foreach (var (native, button) in new[] { (Raylib_cs.MouseButton.Left, MouseButton.Left), (Raylib_cs.MouseButton.Middle, MouseButton.Middle), (Raylib_cs.MouseButton.Right, MouseButton.Right) })
         {

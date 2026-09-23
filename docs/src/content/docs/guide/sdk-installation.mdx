@@ -11,8 +11,8 @@ OpenAxis SDKs work with Rotatrix devices. Device verification is handled automat
 OpenAxis 1.0 and later require Rotatrix 1.6.0 or newer; see
 [Rotatrix compatibility](/reference/language-support/#rotatrix-compatibility).
 
-Choose your language below. For source builds, first [obtain a checkout](#source-checkouts).
-Source commands run from the OpenAxis checkout root unless noted.
+Choose your language below. To work from the repository, [obtain a checkout](#source-checkouts).
+Checkout commands run from the OpenAxis repository root unless noted.
 
 ## Python
 
@@ -76,7 +76,41 @@ From your application directory, install the built local package with
 
 ## C++
 
-Requires C++17 and CMake 3.24 or newer. Embed the source in your application's CMake build:
+Requires C++17 and CMake 3.24 or newer. The C++ SDK is distributed as source
+and compiled with your application.
+
+### Fetch with CMake
+
+Use [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html)
+to fetch a pinned release during CMake configuration. This method also requires
+Git. Add the following to your application's `CMakeLists.txt`, after defining
+the `my_app` target:
+
+```cmake
+include(FetchContent)
+set(OPENAXIS_BUILD_TESTS OFF CACHE BOOL "")
+set(OPENAXIS_BUILD_DEMO OFF CACHE BOOL "")
+FetchContent_Declare(openaxis
+  GIT_REPOSITORY https://github.com/rotatrix/openaxis.git
+  GIT_TAG cpp/v1.0.0-rc.1
+  SOURCE_SUBDIR cpp
+)
+FetchContent_MakeAvailable(openaxis)
+target_link_libraries(my_app PRIVATE OpenAxis::openaxis)
+```
+
+Use the C++ release tag for the version you have tested, or its full commit SHA
+for an exact content pin. `SOURCE_SUBDIR cpp` selects the SDK within the repository.
+
+### Use a downloaded archive or checkout
+
+To manage the source yourself, download `openaxis-cpp-1.0.0-rc.1.tar.gz` from
+the matching C++ [GitHub Release](https://github.com/rotatrix/openaxis/releases)
+and extract it into a directory such as `third_party/openaxis`. The archive
+contains a `cpp` directory; use that directory in `add_subdirectory` below.
+A [source checkout or submodule](#source-checkouts) works the same way.
+
+After defining your application's `my_app` target:
 
 ```cmake
 set(OPENAXIS_BUILD_TESTS OFF CACHE BOOL "")
@@ -84,6 +118,11 @@ set(OPENAXIS_BUILD_DEMO OFF CACHE BOOL "")
 add_subdirectory(path/to/openaxis/cpp openaxis-build)
 target_link_libraries(my_app PRIVATE OpenAxis::openaxis)
 ```
+
+Replace `path/to/openaxis` with the extracted directory or checkout. Configure
+and build your application normally; CMake builds and links the SDK with it.
+
+### Dependencies
 
 CMake looks for installed nlohmann/json 3.11+ and fetches the pinned version if
 missing. Set `OPENAXIS_FETCH_DEPENDENCIES=OFF` and provide nlohmann/json locally

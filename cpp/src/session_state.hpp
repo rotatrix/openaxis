@@ -17,12 +17,12 @@ struct Write {
 };
 struct Effect {
     std::string kind = "reject";
-    Token token;
-    std::optional<std::int64_t> gesture, delta;
-    std::optional<PoseDifference> difference;
-    std::shared_ptr<Write> write;
-    std::string reason;
-    std::optional<Pose> pose;
+    Token token{};
+    std::optional<std::int64_t> gesture{}, delta{};
+    std::optional<PoseDifference> difference{};
+    std::shared_ptr<Write> write{};
+    std::string reason{};
+    std::optional<Pose> pose{};
 };
 class SessionState {
     std::int64_t consumed = -1;

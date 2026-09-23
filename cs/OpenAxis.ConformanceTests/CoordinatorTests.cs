@@ -343,6 +343,8 @@ namespace OpenAxis.ConformanceTests
                 var objects = new Objects(); var h = new Harness(objects: objects);
                 h.Start(); h.Query(values: new[] { "object.pose" }); h.Scheduler.Run();
                 h.Dispatch(ObjectOutput(8, 1)); h.Scheduler.Run();
+                var early = h.Scheduler.Timers[0]; h.Scheduler.Timers.RemoveAt(0); early();
+                Check(h.Scheduler.Timers.Count == 1 && !h.Messages.OfType<MotionCancel>().Any(), "early object timeout rearms");
                 h.Now = 2; foreach (var timer in h.Scheduler.Timers.ToArray()) timer(); h.Scheduler.Run();
                 Check(!h.Session.IsActive && h.Messages.OfType<MotionCancel>().Count() == 1, "object ack timeout cancels gesture");
             }
@@ -645,6 +647,8 @@ namespace OpenAxis.ConformanceTests
             Check(h.Adapter.Writes.Count == 0, "correction barrier prevents native overwrite");
 
             h = new Harness(); h.Ready(); h.Adapter.Camera = Value(12); h.Session.NativeCameraChanged(); h.Scheduler.Run();
+            var earlyCamera = h.Scheduler.Timers[0]; h.Scheduler.Timers.RemoveAt(0); earlyCamera();
+            Check(h.Scheduler.Timers.Count == 1 && !h.Messages.OfType<MotionCancel>().Any(), "early camera timeout rearms");
             h.Now = 2; h.Scheduler.Timers[0](); h.Scheduler.Run();
             Check(h.Messages.OfType<MotionCancel>().Any(m => m.Reason == "camera_delta_timeout"), "timeout without new poses");
 

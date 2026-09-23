@@ -160,12 +160,40 @@ test("failed async object write cancels both streams, optional pivot failure doe
   output("camera",12,2); await tick(); assert.equal(camera.writes.length,1);
 });
 
-test("async correction timeout fires without additional incoming output", async t => {
-  const { object, socket, output } = await setup(t,{ timeout: .01 });
+test("async correction timeout fires without additional incoming output", { timeout: 2000 }, async t => {
+  const cancelled = deferred();
+  const { object, socket, output } = await setup(t,{ timeout: .01,
+    onEvent: event => { if (event.event === "cancelled") cancelled.resolve() } });
   object.limit = 10; output("object",12,1);
   await until(() => socket.sent.some(m => m.type === "object.delta"));
-  await new Promise(resolve => setTimeout(resolve,30));
+  // Wait for the event under the test deadline, not a wall-clock scheduling margin.
+  await cancelled.promise;
   assert.equal(socket.sent.find(m => m.type === "motion_cancel")?.reason,"object_delta_timeout");
+});
+
+for (const kind of ["camera", "object"]) test(`early async ${kind} timeout is rearmed until its deadline`, async t => {
+  const result = await setup(t, { timeout: .01 });
+  let now = 10;
+  const timers = [];
+  t.mock.method(performance, "now", () => now * 1000);
+  t.mock.method(globalThis, "setTimeout", callback => { timers.push(callback); return callback });
+  t.mock.method(globalThis, "clearTimeout", () => {});
+  result[kind].limit = 10;
+  result.output(kind, 12, 1);
+  await until(() => timers.length === 1);
+  now = 10.005;
+  timers.shift()();
+  assert.equal(result.socket.sent.filter(m => m.type === "motion_cancel").length, 0);
+  assert.equal(timers.length, 1, "an early callback must schedule another check");
+  now = 10.011;
+  const deadlineCallback = timers.shift();
+  deadlineCallback();
+  await tick();
+  assert.equal(result.socket.sent.find(m => m.type === "motion_cancel")?.reason, `${kind}_delta_timeout`);
+  assert.equal(timers.length, 0);
+  deadlineCallback();
+  assert.equal(result.socket.sent.filter(m => m.type === "motion_cancel").length, 1);
+  assert.equal(timers.length, 0, "retired callback must not rearm");
 });
 
 test("async diagnostic reentrancy cannot issue a stale authorized write", async t => {

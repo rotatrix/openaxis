@@ -333,10 +333,16 @@ export class NavigationSession<C = unknown, O = unknown> implements OpenAxisList
         this.send?.(stream === this.object
           ? { type: "object.delta", gesture_id: effect.gestureId!, delta_id: effect.deltaId, t: d.t, r: d.r }
           : { type: "camera.delta", gesture_id: effect.gestureId!, delta_id: effect.deltaId, t: d.t, r: d.r, ...(d.scale === undefined ? {} : { ortho_extent_scale: d.scale }) });
-        if (stream.state.deadline !== undefined) this.scheduler.postAt(stream.state.deadline, () => this.effect(stream, stream.state.expire(token, effect.deltaId!, this.clock())));
+        if (stream.state.deadline !== undefined) this.scheduler.postAt(stream.state.deadline, () => this.timeout(stream, token, effect.deltaId!));
       } catch { this.effect(stream, stream.state.sendFailed(token, effect.deltaId!)) }
     }
     this.wake();
+  }
+  private timeout(stream: Stream, token: Token, deltaId: OpenAxisInteger): void {
+    if (!stream.state.current(token) || stream.state.pendingId !== deltaId || stream.state.deadline === undefined) return;
+    const now = this.clock();
+    if (now < stream.state.deadline) this.scheduler.postAt(stream.state.deadline, () => this.timeout(stream, token, deltaId));
+    else this.effect(stream, stream.state.expire(token, deltaId, now));
   }
   drain(): void {
     this.scheduled = false;

@@ -12,7 +12,7 @@ target_link_libraries(my_app PRIVATE OpenAxis::openaxis)
 ```
 
 See [SDK installation](https://openaxis.rotatrix.com/guide/sdk-installation/#cpp)
-for setup details and source builds. Use documentation matching your SDK revision;
+for CMake FetchContent, release archives and dependencies. Use documentation matching your SDK revision;
 checkout APIs may be newer than published packages.
 
 ## Documentation

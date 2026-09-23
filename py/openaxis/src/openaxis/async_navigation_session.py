@@ -399,11 +399,23 @@ class AsyncNavigationSession(OpenAxisListener):
                 messages = (CameraPose(gesture_id=effect.gesture_id, t=p.t, r=p.r,
                                        fov=p.fov, ortho_extent=p.ortho_extent), delta)
             self._submit(messages, effect.token.epoch, self._send, effect.token, effect.delta_id)
-            def timeout():
-                self._timers.discard(handle)
-                self._effect(self._state.expire(effect.token, effect.delta_id, self._loop.time()))
-            handle = self._loop.call_at(self._state.deadline, timeout)
-            self._timers.add(handle)
+            self._arm_timeout(effect.token, effect.delta_id)
+
+    def _arm_timeout(self, token, delta_id):
+        state = self._state
+        if not state.current(token) or state.pending_id != delta_id or state.deadline is None:
+            return
+        def timeout():
+            self._timers.discard(handle)
+            if not state.current(token) or state.pending_id != delta_id or state.deadline is None:
+                return
+            now = self._loop.time()
+            if now < state.deadline:
+                self._arm_timeout(token, delta_id)
+            else:
+                self._effect(state.expire(token, delta_id, now))
+        handle = self._loop.call_at(state.deadline, timeout)
+        self._timers.add(handle)
 
     async def _drain(self):
         try:

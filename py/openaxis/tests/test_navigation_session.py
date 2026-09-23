@@ -391,6 +391,9 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
         self.adapter.camera = pose(12)
         self.session.native_camera_changed()
         await self.flush()
+        self.scheduler.timers.pop(0)[1]()
+        self.assertEqual(len(self.scheduler.timers), 1)
+        self.assertIsNotNone(self.session._state.gesture_id)
         self.now = 2
         self.scheduler.timers[0][1]()
         await self.flush()

@@ -189,6 +189,9 @@ class ObjectTests(unittest.IsolatedAsyncioTestCase):
         self.objects.limit = 10
         self.client._dispatch_message(obj(12, 1))
         await self.flush()
+        self.scheduler.timers.pop(0)[1]()
+        self.assertEqual(len(self.scheduler.timers), 1)
+        self.assertIsNotNone(self.session._object_state.gesture_id)
         self.now = 2
         for _, callback in self.scheduler.timers:
             callback()

@@ -246,6 +246,9 @@ test("failed object write cancels both streams", async t => {
 test("correction timeout needs no further server output", async t => {
   const { object, output, scheduler, socket } = await setup(t);
   object.limit = 10; output("object", 12, 1);
+  scheduler.timers.shift()[1]();
+  assert.equal(socket.sent.some(m => m.type === "motion_cancel"), false);
+  assert.equal(scheduler.timers.length, 1, "early timeout must be rearmed");
   scheduler.now = 2; scheduler.timers.forEach(([, callback]) => callback()); scheduler.run();
   assert.equal(socket.sent.at(-1).reason, "object_delta_timeout");
 });
