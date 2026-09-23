@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "malformed_requests": [
+    {
+      "type": "request",
+      "id": 42,
+      "method": "example",
+      "params": []
+    },
+    {
+      "type": "request",
+      "id": 43,
+      "method": 123
+    },
+    {
+      "type": "request",
+      "id": 44,
+      "method": "navigation.query",
+      "params": {
+        "values": null
+      }
+    },
+    {
+      "type": "request",
+      "id": 45,
+      "method": "navigation.query",
+      "params": {
+        "gesture_id": true
+      }
+    }
+  ],
+  "lifecycle": [
+    {
+      "type": "motion_start",
+      "gesture_id": 7
+    },
+    {
+      "type": "motion_end",
+      "gesture_id": 7
+    }
+  ]
+}

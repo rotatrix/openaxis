@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "integer identifier",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f696401",
+      "valid": true
+    },
+    {
+      "name": "float identifier",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cb3ff0000000000000",
+      "valid": false
+    },
+    {
+      "name": "maximum identifier",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cf001fffffffffffff",
+      "valid": true
+    },
+    {
+      "name": "out of range identifier",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cf0020000000000000",
+      "valid": false
+    },
+    {
+      "name": "binary params",
+      "hex": "84a474797065a772657175657374a2696407a66d6574686f64a76578616d706c65a6706172616d73c403616263",
+      "valid": false
+    },
+    {
+      "name": "binary string",
+      "hex": "83a474797065a56572726f72a4636f6465c40b6261645f72657175657374a76d657373616765a0",
+      "valid": false
+    },
+    {
+      "name": "float scoped query",
+      "hex": "84a474797065a772657175657374a2696408a66d6574686f64b06e617669676174696f6e2e7175657279a6706172616d7381aa676573747572655f6964cb3ff0000000000000",
+      "valid": false
+    },
+    {
+      "name": "nan geometry",
+      "hex": "83a474797065ac63616d6572612e7069766f74aa676573747572655f696401a5706f696e7493cb7ff80000000000000000",
+      "valid": false
+    },
+    {
+      "name": "infinite frame",
+      "hex": "84a474797065a56672616d65a373657101a4745f757300a676616c75657391cb7ff0000000000000",
+      "valid": false
+    },
+    {
+      "name": "float geometry",
+      "hex": "83a474797065ac63616d6572612e7069766f74aa676573747572655f696401a5706f696e7493cb3ff0000000000000cb4000000000000000cb4008000000000000",
+      "valid": true
+    },
+    {
+      "name": "unknown field ignored",
+      "hex": "82a474797065a9686561727462656174aa676573747572655f6964af657874656e73696f6e2d6f776e6564",
+      "valid": true
+    },
+    {
+      "name": "unknown message",
+      "hex": "82a474797065a55f6f70656eaa676573747572655f6964af657874656e73696f6e2d6f776e6564",
+      "valid": true
+    },
+    {
+      "name": "trailing value",
+      "hex": "81a474797065a968656172746265617400",
+      "valid": false
+    },
+    {
+      "name": "truncated map",
+      "hex": "81a474797065",
+      "valid": false
+    },
+    {
+      "name": "query field cannot be shadowed by unknown dotted field",
+      "hex": "85a474797065a772657175657374a2696401a66d6574686f64b06e617669676174696f6e2e7175657279a6706172616d7381aa676573747572655f6964cb3ff0000000000000b1706172616d732e676573747572655f696401",
+      "valid": false
+    },
+    {
+      "name": "unknown dotted field ignored",
+      "hex": "85a474797065a772657175657374a2696401a66d6574686f64b06e617669676174696f6e2e7175657279a6706172616d7381aa676573747572655f696401b1706172616d732e676573747572655f6964cb3ff0000000000000",
+      "valid": true
+    },
+    {
+      "name": "unknown hello ack target ignored",
+      "hex": "84a474797065a968656c6c6f5f61636ba570726f746fac6f70656e617869732f312e30ab7365727665725f6e616d65a474657374a6746172676574c0",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding cc",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cc01",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding cd",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cd0001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding ce",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964ce00000001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding cf",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cf0000000000000001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding d0",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964d001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding d1",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964d10001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding d2",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964d200000001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding d3",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964d30000000000000001",
+      "valid": true
+    },
+    {
+      "name": "identifier encoding ca",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964ca3f800000",
+      "valid": false
+    },
+    {
+      "name": "identifier encoding cb",
+      "hex": "82a474797065ac6d6f74696f6e5f7374617274aa676573747572655f6964cb3ff0000000000000",
+      "valid": false
+    }
+  ]
+}

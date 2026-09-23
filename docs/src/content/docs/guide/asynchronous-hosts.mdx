@@ -1,0 +1,115 @@
+---
+title: Asynchronous APIs
+description: Use Python and TypeScript async sessions for awaitable application operations.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+
+Use `AsyncNavigationSession` when application reads and writes are awaitable,
+as with a remote application API. Python supports cameras; TypeScript supports
+cameras and optional objects. Asynchronous native adapters are not yet implemented
+in C# or C++.
+
+## How asynchronous navigation works
+
+`AsyncNavigationSession` waits for application operations to complete while the
+event loop remains available for other work. It serializes adapter calls and
+retains the newest pending pose, so slow application access does not create an
+unbounded queue of obsolete camera updates.
+
+This changes the application-facing adapter contract. A successful write result
+means the application has completed the write, not merely accepted an RPC for
+later execution. Application operations need their own timeouts because the SDK
+cannot retract a remote write that has already been issued.
+
+## Integration setup
+
+These illustrative fragments assume an existing client and remote application
+adapter. Python and TypeScript both support the diagnostic collector.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The startup callback receives the existing `OpenAxisClient` as `client` and the
+remote application's adapter as `remote_adapter`. The application retains
+`AsyncNavigationSession` until shutdown, when it awaits `close()` before disposing
+the remote transport:
+
+```python
+from openaxis.async_navigation_session import AsyncNavigationSession
+
+# Your remote_adapter is the application adapter with awaitable methods.
+session = AsyncNavigationSession(client, remote_adapter,
+                                 observation=remote_adapter.read_camera)
+# On application shutdown, before closing the remote transport:
+await session.close()
+```
+
+Construct it on the asyncio loop used by the client and application. No scheduler is
+needed. Implement `capture_context`, `is_current`, `begin_query`,
+`read_camera`, `apply_camera`, and optional `show_pivot` as async methods.
+The capture's `resolve` and `initial_camera_observation` are also async.
+See [adapter contracts](/reference/navigation-hosts/).
+
+Return `WriteResult` only after the actual write completes.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+This illustrative setup assumes an existing OpenAxis client and remote camera/object
+adapters. `readCamera` and `readObject` are host functions that return actual poses
+for the captured context. Startup creates `AsyncNavigationSession`; teardown
+awaits its `close()` method:
+
+```ts
+import { AsyncNavigationSession } from "@openaxis/sdk";
+
+const session = new AsyncNavigationSession(client, cameraAdapter, {
+  observation: context => readCamera(context),
+  objectAdapter,
+  objectObservation: context => readObject(context),
+});
+// Before disposing the remote API:
+await session.close();
+```
+
+Use `AsyncNavigationAdapter<C>` and `AsyncNavigationCapture`. Their methods use
+the synchronous TypeScript names (`captureContext`, `isCurrent`, `beginQuery`,
+`applyPose`, `showPivot`, `resolve`, `initialObservation`), but may return Promises.
+Observation callbacks may also return Promises. Resolve `applyPose` with
+`{ success, realizedPose }` after the actual write completes. The adapters and
+read functions in this example are supplied by the application.
+
+One event-loop worker serializes camera and object host calls, with separate
+sequence/correction state and one pending pose per stream. No external scheduler
+is accepted. `close()` retains navigation ownership until issued work settles.
+TypeScript also offers typed `onEvent({ event, values })` callbacks.
+
+</TabItem>
+<TabItem label="C#">
+
+The C# SDK supports `NavigationSession` with synchronous application callbacks
+and an `INavigationScheduler` that dispatches to the application thread.
+`ApplyCamera()` completes synchronously; it cannot return a `Task`. A remote API
+that requires awaited writes needs a different integration approach. See
+[language support](/reference/language-support/).
+
+</TabItem>
+<TabItem label="C++">
+
+C++ supports synchronous `NavigationAdapter` methods dispatched through a native `Scheduler` on the application thread. It has no awaitable host coordinator. Background WebSocket networking does not make host callbacks asynchronous; do not return before a native write completes. See [language support](/reference/language-support/).
+
+</TabItem>
+</Tabs>
+
+## Verify
+
+For Python and TypeScript async sessions, introduce latency, replace the target,
+and cancel while a write is outstanding.
+The SDK serializes adapter calls and retains the newest pending pose per supported stream, but
+cannot retract an issued remote write. Native input can occur between a read and
+write; some glitches remain possible. Closing waits for issued adapter work.
+
+For C#, validate deferred application-thread dispatch, synchronous write readback
+and context invalidation using the [navigation quickstart](/guide/navigation-quickstart/).

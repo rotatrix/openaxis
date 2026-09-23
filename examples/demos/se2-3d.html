@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAxis — Camera Locomotion</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { overflow: hidden; background: #87ceeb; }
+    canvas { display: block; }
+    .controls-hint {
+      position: fixed; bottom: 16px; left: 16px; z-index: 10;
+      max-width: calc(100vw - 56px); padding: 12px;
+      border-radius: 8px; background: rgba(15, 23, 32, 0.85); color: #fff;
+      font: 13px/1.6 system-ui, sans-serif; pointer-events: none;
+    }
+    .controls-hint strong { display: block; font-size: 14px; }
+    .controls-hint .secondary { color: #ccd5df; }
+  </style>
+</head>
+<body>
+  <aside class="controls-hint" aria-label="Default Rotatrix controls">
+    <strong>Hold button 4 and roll the ball to walk</strong>
+    <div class="secondary">Or hold Win (Windows), Cmd (Mac), or Super (Linux).</div>
+    <div>Add Shift to look &middot; Ctrl for height &middot; Alt for continuous motion</div>
+    <div class="secondary">Release to stop. Default controls; your Rotatrix profile may differ.</div>
+  </aside>
+  <script type="module">
+    import * as THREE from "three";
+    import { OpenAxisClient, NavigationSession, UNAVAILABLE } from "../../ts/sdk/src/index.js";
+    import { manageFocus } from "./lib/focus-manager.js";
+    import { createStatusHUD } from "./lib/status-hud.js";
+    import { Quat } from "../../ts/sdk/src/geometry/index.js";
+    const threeQuatToRotvec = q => new Quat(q.w, q.x, q.y, q.z).toRotvec();
+    const rotvecToThreeQuat = r => {
+      const q = Quat.fromRotvec(...r);
+      return new THREE.Quaternion(q.x, q.y, q.z, q.w);
+    };
+
+
+
+
+
+    // --- Scene setup (z-up) ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 500);
+    camera.up.set(0, 0, 1);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // --- Lights ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+    sun.position.set(5, 5, 10);
+    scene.add(sun);
+
+    // --- Ground grid (z=0 plane) ---
+    // GridHelper is y-up by default, rotate to z-up
+    const grid = new THREE.GridHelper(80, 40, 0x558855, 0x447744);
+    grid.rotation.x = Math.PI / 2; // rotate so it lies on z=0
+    scene.add(grid);
+
+    // Ground plane
+    const groundGeo = new THREE.PlaneGeometry(80, 80);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7d3a });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    // PlaneGeometry faces +Z by default, which is what we want for z-up
+    scene.add(ground);
+
+    // --- Seeded random scattered objects ---
+    function seededRandom(seed) {
+      let s = seed;
+      return function () {
+        s = (s * 16807) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+    }
+
+    const rng = seededRandom(42);
+    const objColors = [0xcc4444, 0x44cc44, 0x4444cc, 0xcccc44, 0xcc44cc, 0x44cccc];
+    const geometries = [
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.ConeGeometry(0.5, 1.2, 8),
+      new THREE.CylinderGeometry(0.4, 0.4, 1, 12),
+      new THREE.SphereGeometry(0.5, 16, 12),
+    ];
+
+    for (let i = 0; i < 30; i++) {
+      const geo = geometries[Math.floor(rng() * geometries.length)];
+      const color = objColors[Math.floor(rng() * objColors.length)];
+      const mat = new THREE.MeshLambertMaterial({ color });
+      const mesh = new THREE.Mesh(geo, mat);
+
+      const dist = 3 + rng() * 30;
+      const angle = rng() * Math.PI * 2;
+      mesh.position.set(
+        Math.cos(angle) * dist,
+        Math.sin(angle) * dist,
+        0.5 + rng() * 1.5
+      );
+
+      // Rotate cones/cylinders to stand upright in z-up
+      if (geo === geometries[1] || geo === geometries[2]) {
+        mesh.rotation.x = Math.PI / 2;
+      }
+
+      const s = 0.5 + rng() * 1.5;
+      mesh.scale.set(s, s, s);
+      scene.add(mesh);
+    }
+
+    // --- Initial camera pose: standing at origin, looking along +Y ---
+    const CAM_HEIGHT = 1.5;
+    camera.position.set(0, 0, CAM_HEIGHT);
+    camera.lookAt(0, 1, CAM_HEIGHT);
+
+    // Publish walking preferences; the user's shared profile chooses device controls.
+    let alive = true, stopping, animationFrame;
+    const updateHUD = createStatusHUD();
+    const client = new OpenAxisClient({ clientName: "demo-camera-locomotion" });
+    const cameraPose = () => ({ t: camera.position.toArray(), r: threeQuatToRotvec(camera.quaternion), fov: camera.fov * Math.PI / 180 });
+    const adapter = {
+      captureContext: () => alive ? camera : undefined,
+      isCurrent: context => alive && context === camera,
+      beginQuery() {
+        const pose = cameraPose();
+        return { resolve(name) {
+          switch (name) {
+            case "document.id": return "demo-camera-locomotion";
+            case "world.orientation": return { forward: [0, 1, 0], up: [0, 0, 1], handedness: "right" };
+            case "camera.pose": return pose;
+            case "viewport.aspect": return camera.aspect;
+            case "navigation.preferences": return { lock_roll: true, lock_translation_plane: true };
+            case "navigation.translation_scale": return 10;
+            case "camera.view_target": {
+              const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+              return camera.position.clone().addScaledVector(direction, 10).toArray();
+            }
+            default: return UNAVAILABLE;
+          }
+        } };
+      },
+      applyPose(context, pose) {
+        if (pose.fov === undefined) return { success: false };
+        camera.position.fromArray(pose.t);
+        camera.quaternion.copy(rotvecToThreeQuat(pose.r));
+        camera.fov = pose.fov * 180 / Math.PI;
+        camera.updateProjectionMatrix();
+        return { success: true, realizedPose: cameraPose() };
+      },
+    };
+    const session = new NavigationSession(client, adapter);
+    const cancelGesture = () => session.contextChanged();
+    const fm = manageFocus(client, {
+      metadata: () => ({ tags: ["navigation.hint.free_camera"], capabilities: ["navigation"] }),
+      onState: updateHUD,
+      onPauseChange(paused) { updateHUD.setPaused(paused); if (paused) cancelGesture(); },
+    });
+    const onKey = e => { if (e.key === "Escape") fm.isPaused() ? fm.resume() : fm.pause(); };
+    const onClick = () => fm.resume();
+    const onResize = () => {
+      camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+      renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight);
+    };
+    const onPageHide = event => {
+      if (event.persisted) cancelGesture();
+      else void shutdown().catch(error => console.error("Camera locomotion shutdown failed", error));
+    };
+    addEventListener("keydown", onKey); addEventListener("blur", cancelGesture);
+    addEventListener("resize", onResize); addEventListener("pagehide", onPageHide);
+    renderer.domElement.addEventListener("click", onClick);
+    function shutdown() {
+      if (stopping) return stopping;
+      alive = false; cancelAnimationFrame(animationFrame);
+      removeEventListener("keydown", onKey); removeEventListener("blur", cancelGesture);
+      removeEventListener("resize", onResize); removeEventListener("pagehide", onPageHide);
+      renderer.domElement.removeEventListener("click", onClick);
+      stopping = (async () => {
+        try { await fm.destroy(); }
+        finally {
+          session.close(); session.drain();
+          const disposedGeometries = new Set();
+          scene.traverse(object => {
+            if (object.geometry && !disposedGeometries.has(object.geometry)) {
+              disposedGeometries.add(object.geometry); object.geometry.dispose();
+            }
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            for (const material of materials) material?.dispose();
+          });
+          renderer.dispose();
+        }
+      })();
+      return stopping;
+    }
+    function animate() {
+      if (!alive) return;
+      animationFrame = requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+---
+title: Picking and pivots
+description: Follow scene queries and pivot display in the demo 3D applications.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import cppSource from '../../../../../examples/cpp_demo_3d_app/integration.hpp?raw';
+import SourceLink from '../../../components/SourceLink.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+A pivot is the point around which navigation rotates. Rotatrix chooses it using
+scene information supplied by the application: a pick locates geometry under a
+screen position, and bounds describe the extent of a model or selection.
+
+The [demos](/guide/navigation-quickstart/) answer those geometry queries and
+display the pivot returned by Rotatrix. The integration supplies facts;
+Rotatrix's navigation policy decides which fact to use.
+
+## Try it
+
+Run the demo, press **D**, then navigate over a cube and empty space. Click to
+select a cube and repeat. Compare reported hits and bounds with the scene. A green
+marker shows the server-supplied pivot using the [shared disc appearance](/experience/pivots-diagnostics/#pivot-marker-appearance).
+
+Repeat with the cursor outside the viewport and with tall and wide windows.
+Diagnostics identify evaluated alternatives; a skipped alternative needs a
+separate query or resolver test.
+
+## Query handling
+
+NavigationSession calls the adapter's query-capture method on the application
+thread. The capture saves camera, viewport size and cursor state. The SDK resolves
+requested facts lazily, stopping ordered alternatives at the first available result.
+
+Capture live state on the thread required by the application API. Let the SDK
+complete the correlated response; do not send a second response from the adapter.
+
+For low-level listeners, a query's `completed` property (`Completed` in C#,
+`completed()` in C++) becomes true when it completes, fails or is retired. A
+completed query counts as handled even if the listener returns false. Completion
+arguments are validated before claiming the query; a transport failure after the
+claim does not reopen it. Responses remain bound to the originating connection,
+so deferred work cannot reply through a later reconnect. Completing or failing a
+query a second time raises an error.
+
+For standard pick facts, a result map with an absent or null `point` is unavailable
+on the wire and allows the next ordered candidate to run. This includes `{}` when
+no diagnostic marker is supplied. Optional `markerPosition` data never changes
+candidate selection and is not transmitted.
+
+Avoid computing picks or other expensive facts before the resolver requests them.
+Do not cache candidate order across queries: later requests can shorten, reorder,
+split, or repeat the requested facts.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The `NavigationSession` calls `MyQueryCapture.resolve(self, name)` with a requested fact name.
+The [quickstart's query overview](/guide/navigation-quickstart/#answering-scene-queries)
+shows how its constructor saves `self.app`, `self.camera`, viewport dimensions and
+cursor. The resolver uses that saved state to answer each request.
+`bounds_value()` converts application bounds to minimum and maximum world-space
+points. `UNAVAILABLE` indicates that a requested fact cannot be supplied:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf("        if name in ('model.bounds', 'selection.bounds'):"), integrationSource.indexOf('class MyObjectAdapter:')).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyQueryCapture.resolve" />
+
+</TabItem>
+<TabItem label="C#">
+
+Inside `MyQueryCapture.Resolve`, this branch handles the pick fact after the
+camera and bounds cases. `app`, `cursor` and viewport dimensions were captured
+for this query. The other resolver branches are omitted.
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf('        if (name is "pick.cursor"'), csharpSource.indexOf("        return NavigationQuery.Unavailable;", csharpSource.indexOf('        if (name is "pick.cursor"'))).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyQueryCapture.Resolve" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`MyQueryCapture` saves camera, dimensions and cursor for one query. The
+application supplies the picker and world-space bounds. Inside `resolve(name)`,
+after identifying a requested pick fact, this branch uses the captured cursor
+or center position:
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('    const pixel: [number, number]'), typescriptSource.indexOf('\n  }', typescriptSource.indexOf('    const pixel: [number, number]'))).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyQueryCapture.resolve" />
+
+</TabItem>
+<TabItem label="C++">
+
+`MyQueryCapture::resolve` resolves each fact synchronously during the scheduled navigation drain. The session memoizes repeated facts within a query and preserves `first` short-circuiting. Because the demo does not yield or pump native events during fact resolution, camera, cursor and selection remain consistent for that query.
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+| Query | Application operation |
+| --- | --- |
+| pick.cursor | Pick through the cursor, provided it is inside the viewport. |
+| pick.viewport_center | Pick through the viewport center independently of the cursor. |
+| Either name with .selection | Restrict the pick to selected geometry. |
+| model.bounds / selection.bounds | Return scene or selection world-space bounds. |
+
+Perform picking only when the resolver requests it. An unavailable cursor,
+selection or hit lets the server try its next candidate. Viewport cursor values
+use normalized [-1, 1] coordinates, with Y up; the native picker uses its own
+pixel coordinates.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+MyApplication.pick() in [application.py](/examples/python_demo_3d_app/application.py) uses Panda3D collision picking and returns a world-space point and transformed bounds. A tested miss returns only `markerPosition`; a skipped test returns UNAVAILABLE. The SDK collects the marker from the result and omits it from the wire response.
+
+</TabItem>
+<TabItem label="C#">
+
+The application API returns world-space hit points and transformed bounds.
+Selection-only picking filters out unselected objects. Tested misses return only
+`markerPosition`; skipped tests return `NavigationQuery.Unavailable`. The pivot marker is excluded from both picking
+and bounds. Picking uses the same screen coordinates as raylib input and rendering.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`MyApplication.pick(pixel, selectionOnly)` receives viewport-relative pixels with Y down. Return a world-space hit or `undefined`; restrict selection-only picks to selected geometry. `bounds` must include object transforms. Exclude pivot and diagnostic graphics from both operations. A center pick still works when the cursor is outside the viewport.
+
+</TabItem>
+<TabItem label="C++">
+
+The [C++ application](/source/cpp_demo_3d_app/application.cpp/) ray-tests the shared scene's actual triangles and optional ground plane. Its integration supplies all four cursor/center and selection-only pick facts and model/selection/object bounds. Tested misses return only `markerPosition`; skipped tests return JSON `null`. Returned points and bounds are in world space; marker coordinates are local renderer metadata stripped from the wire response. Visual pivot geometry is excluded from picking.
+
+</TabItem>
+</Tabs>
+
+## Choosing a native picking operation
+
+Use the application's native hit-test API, a geometric raycast, or an equivalent
+operation that produces the requested world-space surface hit. When supported,
+visible bounded construction or datum planes and an active sketch plane can
+participate. Within the applicable candidate set, prevent back faces of closed
+solids from winning through foreground geometry. Selection-only queries first
+restrict that candidate set to selected geometry; unselected geometry does not
+occlude those hits.
+
+Keep each result tied to its query snapshot. Do not recompute the selected fact
+during a gesture unless the server queries it again. Returned optional bounds
+describe the hit object or body, not an unrelated object or the entire selection.
+
+## Pivot display
+
+The marker shows the pivot Rotatrix actually chose, which can differ from the
+geometry under the cursor. `NavigationSession` passes that point to the adapter
+for display in the captured viewport. It later passes no point to clear the
+marker when navigation is cleaned up.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The `NavigationSession` calls `MyNavigationAdapter.show_pivot()` with the captured
+`MyApplication` as `context`, and a world-space point or
+`None` as `point`:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('    def show_pivot('), integrationSource.indexOf('class MyQueryCapture:')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyNavigationAdapter.show_pivot" />
+
+The application's `set_pivot_marker()` displays the point; `None` clears it.
+
+</TabItem>
+<TabItem label="C#">
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("    public void ShowPivot(object context, Vec3? point)")).split('\n')[0].trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyNavigationAdapter.ShowPivot" />
+
+`app.ShowPivot()` displays the point; `null` removes the marker.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`MyNavigationAdapter.showPivot()` delegates to the application's display API.
+The point belongs to the captured viewport; `undefined` clears the marker.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('  showPivot(context:'), typescriptSource.indexOf('// #endregion camera')).replace(/\r?\n}\s*$/, '').replace(/^ {2}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyNavigationAdapter.showPivot" />
+
+</TabItem>
+<TabItem label="C++">
+
+`pivot(std::optional<Vec3>)` stores or clears the green camera marker and updates the application's orbit target when present. The SDK clears it on retirement. The demo also implements `object_pivot` and draws both using the [standard marker](/experience/pivots-diagnostics/#pivot-marker-appearance). Its SDK diagnostic collector supplies the separate subdued labeled pick crosshairs and bounds.
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('    void show_pivot('), cppSource.indexOf('\n};', cppSource.indexOf('    void show_pivot('))).replace(/^ {4}/gm, '').trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+See [pivot display guidance](/experience/pivots-diagnostics/) when adapting
+the display to your application.
+
+## Verification
+
+Check cursor/center independence, selection filtering, transformed bounds and
+picks, both projections, and portrait/landscape aspect ratios. Validate native
+display scaling and split viewports in your target application. A behind-eye
+pivot in orthographic view is currently rejected by the server.
+
+For automated commands and coverage, use the demo READMEs: [Python](/examples/python_demo_3d_app/README.md), [C#](/examples/csharp_demo_3d_app/README.md), [TypeScript](/examples/typescript_demo_3d_app/README.md), and [C++](/examples/cpp_demo_3d_app/README.md).

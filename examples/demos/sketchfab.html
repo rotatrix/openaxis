@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenAxis · Sketchfab Viewer</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#10171e;color:#e7eef4;font:14px/1.5 system-ui}main{display:grid;grid-template-columns:330px 1fr;height:100dvh}aside{padding:24px;overflow:auto;border-right:1px solid #344552}a{color:#91ccfa}h1{font-size:24px;margin:12px 0 8px}h2{font-size:14px;margin:22px 0 8px}p{color:#acbeca}button,input,select{font:inherit;border:1px solid #486174;border-radius:6px;background:#203342;color:#eef6fc;padding:7px}button{cursor:pointer}button:hover{background:#36546a}button:disabled{opacity:.4;cursor:default}input{min-width:0;width:100%}label{display:block;margin:8px 0}input[type=checkbox]{width:auto}fieldset{border:0;padding:0;margin:0}.row{display:flex;gap:6px;margin:6px 0}.row>*{flex:1}.status{padding:10px;background:#182d3a;border-radius:6px;color:#a8dcff;overflow-wrap:anywhere}#stage{position:relative;min-height:350px}iframe{width:100%;height:100%;border:0}#shield{position:absolute;inset:0;display:none;cursor:default}body.controlled #shield{display:block}pre{font-size:11px;white-space:pre-wrap;color:#a9c0cf}small{color:#9aacb8}details{margin-top:20px}summary{cursor:pointer}@media(max-width:720px){main{grid-template-columns:1fr;height:auto}aside{order:2}#stage{height:60dvh}}
+  </style>
+  <style>#pivot-marker{position:absolute;width:18px;height:18px;transform:translate(-50%,-50%);border:2px solid #ffc857;border-radius:50%;box-shadow:0 0 0 2px #152533;pointer-events:none;z-index:2}#pivot-marker::before,#pivot-marker::after{content:'';position:absolute;background:#ffc857}#pivot-marker::before{width:24px;height:2px;left:-5px;top:6px}#pivot-marker::after{height:24px;width:2px;top:-5px;left:6px}</style>
+</head>
+<body><main>
+  <aside>
+    <a href="index.html">← OpenAxis playgrounds</a><h1>Sketchfab Viewer</h1>
+    <p>Navigate Sketchfab with OpenAxis. Camera translation, rotation, and roll use the embedded Viewer API.</p>
+    <label>Model<select id="model-select" style="width:100%">
+      <optgroup label="Demo favorites">
+        <option value="faef9fe5ace445e7b2989d1c1ece361c">Shiba</option>
+        <option value="fb30feb22cf04b91be3be0872d10ba17">Porsche 996 GT300 · vecarz</option>
+      </optgroup>
+      <optgroup label="Staff Picks · environments">
+        <option value="94b24a60dc1b48248de50bf087c0f042">Littlest Tokyo · glenatron</option>
+        <option value="1c81991c1aa34e548096f0349defc4a6">Sangenjaya at night, Tokyo · Raiz</option>
+        <option value="1d5285f2e0fd4211a27c8042496d5959">Abandoned Warehouse · Aurélien Martel</option>
+        <option value="a1177381d3464f75b10cb8f462f0b9a5">After the rain… · Aurélien Martel</option>
+        <option value="30b694d1a4074855a1116a15a0f75731">Postwar City · Aurélien Martel</option>
+        <option value="2043203b32b548cc84448e4ffe2be28c">Medieval City Pack Demo · Ivanix88</option>
+        <option value="feb9ad17e042418c8e759b81e3b2e5d7">The Great Drawing Room · Hallwyl Museum</option>
+        <option value="faed84a829114e378be255414a7826ca">Cathedral · patrix</option>
+        <option value="09a15a0c14cb4accaf060a92bc70413d">Sea Keep “Lonely Watcher” · Artjoms Horosilovs</option>
+      </optgroup>
+      <optgroup label="Staff Picks · objects">
+        <option value="8568d9d14a994b9cae59499f0dbed21e">1975 Porsche 911 Turbo · Lionsharp Studios</option>
+        <option value="9b3f278bacc54f219addd98215008ceb">Study · Miki Bencz</option>
+      </optgroup>
+      <option value="custom">Custom model…</option>
+    </select></label>
+    <a id="model-source" target="_blank" rel="noopener noreferrer">View model and creator on Sketchfab ↗</a>
+    <details id="custom-model"><summary>Load a model URL or UID</summary><form id="model-form"><label>Model URL or UID<input id="model" value="faef9fe5ace445e7b2989d1c1ece361c" required></label><button>Load model</button></form></details>
+    <p id="status" class="status" role="status">Loading viewer…</p>
+    <p id="device-status" role="status">OpenAxis: paused</p>
+    <small id="device-pivot">Device pivot: idle</small>
+    <fieldset id="controls" disabled>
+      <label>Navigation<select id="navigation-mode" style="width:100%"><option value="orbit">Orbit · surface pivot</option><option value="free_camera">Free camera · walk / look</option></select></label>
+      <label id="travel-speed-control" hidden>Translation speed<select id="travel-speed" style="width:100%"><option value="0.25">0.25× · precise</option><option value="1" selected>1× · half model extent per 90°</option><option value="4">4× · fast</option><option value="16">16× · explore</option></select><small id="travel-scale"></small></label>
+      <div class="row"><button id="pause">Pause device</button><button id="reset">Reset pose</button></div>
+      <h2>Surface pivot</h2>
+      <p>Point at the model before moving the device. Each new orbit gesture picks under the cursor, then tries the viewport center if it misses.</p>
+      <div class="row"><button id="lock-pivot">Lock last pivot</button><button id="unlock-pivot">Unlock pivot</button></div>
+      <p id="pick-status" role="status">Surface picking is ready for the next device gesture.</p>
+      <p><small id="navigation-help">Default navigation controls: hold Win (Windows), Ctrl (Mac), or Super (Linux) to orbit; button 4 pans. Shift swaps orbit/pan. Button 1 snaps the view; button 2 locks turntable rotation.</small></p>
+    </fieldset>
+    <details id="sdk-diagnostics-panel" open><summary>OpenAxis diagnostics</summary><p><small>Live query, pivot, and pose evidence. Visual guides overlay the viewer; model surfaces do not hide them.</small></p><pre id="sdk-diagnostics"></pre></details>
+    <details><summary>Viewer API details</summary><button id="readback">Check camera readback</button><pre id="diagnostics">Waiting for viewerready.</pre></details>
+    <p><small>Connects automatically when the model is ready. Escape toggles device pause. Native Sketchfab navigation stays disabled so its camera does not conflict with OpenAxis. Experimental roll API; exact Z-up poles are not supported.</small></p>
+  </aside>
+  <div id="stage"><iframe id="viewer" title="Sketchfab model" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen></iframe><div id="shield" aria-label="Camera controlled by OpenAxis"></div><div id="pivot-marker" aria-label="Server-selected pivot" hidden></div></div>
+</main>
+<script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
+<script type="module" src="./lib/sketchfab-demo.js"></script>
+</body></html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAxis — Axis Streaming</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a1a;
+      color: #f0f0f0;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { margin-bottom: 10px; font-size: 24px; }
+    .subtitle { color: #888; margin-bottom: 30px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .card { background: #2a2a2a; border-radius: 8px; padding: 20px; }
+    .card h2 { font-size: 16px; margin-bottom: 15px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+    .value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .value { text-align: center; }
+    .value-label { font-size: 12px; color: #888; margin-bottom: 5px; }
+    .value-number { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .info-grid { display: grid; gap: 10px; }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 14px; color: #888; }
+    .info-value { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .button-indicator {
+      width: 40px; height: 40px; border-radius: 8px; background: #333;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; transition: all 0.1s;
+    }
+    .button-indicator.active { background: #0066ff; transform: scale(1.1); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OpenAxis Axis Streaming</h1>
+    <p class="subtitle">Axis Streaming + buttons</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Translation controls (rad/s)</h2>
+        <div class="value-grid">
+          <div class="value"><div class="value-label">X</div><div class="value-number" id="tx">0.000</div></div>
+          <div class="value"><div class="value-label">Y</div><div class="value-number" id="ty">0.000</div></div>
+          <div class="value"><div class="value-label">Z</div><div class="value-number" id="tz">0.000</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Rotation controls (rad/s)</h2>
+        <div class="value-grid">
+          <div class="value"><div class="value-label">X</div><div class="value-number" id="rx">0.000</div></div>
+          <div class="value"><div class="value-label">Y</div><div class="value-number" id="ry">0.000</div></div>
+          <div class="value"><div class="value-label">Z</div><div class="value-number" id="rz">0.000</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Frame Info</h2>
+        <div class="info-grid">
+          <div class="info-row"><span class="info-label">Sequence</span><span class="info-value" id="seq">&mdash;</span></div>
+          <div class="info-row"><span class="info-label">Timestamp (&mu;s)</span><span class="info-value" id="timestamp">&mdash;</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Buttons</h2>
+      <div class="buttons" id="buttons"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { OpenAxisClient } from "../../ts/sdk/src/index.js";
+    import { manageFocus } from "./lib/focus-manager.js";
+    import { createStatusHUD } from "./lib/status-hud.js";
+
+    const txEl = document.getElementById("tx");
+    const tyEl = document.getElementById("ty");
+    const tzEl = document.getElementById("tz");
+    const rxEl = document.getElementById("rx");
+    const ryEl = document.getElementById("ry");
+    const rzEl = document.getElementById("rz");
+    const seqEl = document.getElementById("seq");
+    const timestampEl = document.getElementById("timestamp");
+    const buttonsContainer = document.getElementById("buttons");
+
+    for (let i = 1; i <= 12; i++) {
+      const btn = document.createElement("div");
+      btn.className = "button-indicator";
+      btn.textContent = i;
+      btn.id = `btn-${i}`;
+      buttonsContainer.appendChild(btn);
+    }
+
+    const updateHUD = createStatusHUD();
+    let alive = true, stopping;
+
+    const client = new OpenAxisClient({
+      clientName: "demo-basic",
+    }, {
+
+      onFrame(frame) {
+        if (!alive) return;
+        const v = frame.values;
+        txEl.textContent = (v[0] || 0).toFixed(3);
+        tyEl.textContent = (v[1] || 0).toFixed(3);
+        tzEl.textContent = (v[2] || 0).toFixed(3);
+        rxEl.textContent = (v[3] || 0).toFixed(3);
+        ryEl.textContent = (v[4] || 0).toFixed(3);
+        rzEl.textContent = (v[5] || 0).toFixed(3);
+        seqEl.textContent = frame.seq.toString();
+        timestampEl.textContent = frame.t_us.toLocaleString();
+      },
+      onButtons(buttons) {
+        if (!alive) return;
+        for (let i = 0; i < 12; i++) {
+          const btn = document.getElementById(`btn-${i + 1}`);
+          btn.classList.toggle("active", (buttons & (1 << i)) !== 0);
+        }
+      },
+    });
+    const fm = manageFocus(client, { metadata: () => ({ tags: ["demo-basic"], axes: ["tx", "ty", "tz", "rx", "ry", "rz"] }), onState: updateHUD, onPauseChange: updateHUD.setPaused });
+    const onKey = e => { if (e.key === "Escape") fm.isPaused() ? fm.resume() : fm.pause(); };
+    addEventListener("keydown", onKey);
+    const onClick = () => fm.resume();
+    document.addEventListener("click", onClick);
+    function shutdown() {
+      if (stopping) return stopping;
+      alive = false;
+      removeEventListener("keydown", onKey);
+      document.removeEventListener("click", onClick);
+      return stopping = fm.destroy();
+    }
+    addEventListener("pagehide", event => {
+      if (!event.persisted) void shutdown().catch(error => console.error("Axis Streaming shutdown failed", error));
+    });
+  </script>
+</body>
+</html>

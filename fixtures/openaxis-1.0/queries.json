@@ -1,0 +1,218 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "pick miss {}",
+      "params": {
+        "values": [
+          "pick.cursor",
+          "pick.cursor"
+        ],
+        "first": [
+          "pick.cursor",
+          "pick.viewport_center",
+          "pick.cursor.selection"
+        ]
+      },
+      "facts": {
+        "pick.cursor": {},
+        "pick.viewport_center": {
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "markerPosition": [
+            0,
+            0
+          ]
+        }
+      },
+      "calls": [
+        "pick.cursor",
+        "pick.viewport_center"
+      ],
+      "result": {
+        "values": {},
+        "first": {
+          "name": "pick.viewport_center",
+          "value": {
+            "point": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pick miss {'point': None}",
+      "params": {
+        "values": [
+          "pick.cursor",
+          "pick.cursor"
+        ],
+        "first": [
+          "pick.cursor",
+          "pick.viewport_center",
+          "pick.cursor.selection"
+        ]
+      },
+      "facts": {
+        "pick.cursor": {
+          "point": null
+        },
+        "pick.viewport_center": {
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "markerPosition": [
+            0,
+            0
+          ]
+        }
+      },
+      "calls": [
+        "pick.cursor",
+        "pick.viewport_center"
+      ],
+      "result": {
+        "values": {},
+        "first": {
+          "name": "pick.viewport_center",
+          "value": {
+            "point": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pick miss {'markerPosition': [0, 0]}",
+      "params": {
+        "values": [
+          "pick.cursor",
+          "pick.cursor"
+        ],
+        "first": [
+          "pick.cursor",
+          "pick.viewport_center",
+          "pick.cursor.selection"
+        ]
+      },
+      "facts": {
+        "pick.cursor": {
+          "markerPosition": [
+            0,
+            0
+          ]
+        },
+        "pick.viewport_center": {
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "markerPosition": [
+            0,
+            0
+          ]
+        }
+      },
+      "calls": [
+        "pick.cursor",
+        "pick.viewport_center"
+      ],
+      "result": {
+        "values": {},
+        "first": {
+          "name": "pick.viewport_center",
+          "value": {
+            "point": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pick miss {'point': None, 'markerPosition': [0, 0]}",
+      "params": {
+        "values": [
+          "pick.cursor",
+          "pick.cursor"
+        ],
+        "first": [
+          "pick.cursor",
+          "pick.viewport_center",
+          "pick.cursor.selection"
+        ]
+      },
+      "facts": {
+        "pick.cursor": {
+          "point": null,
+          "markerPosition": [
+            0,
+            0
+          ]
+        },
+        "pick.viewport_center": {
+          "point": [
+            1,
+            2,
+            3
+          ],
+          "markerPosition": [
+            0,
+            0
+          ]
+        }
+      },
+      "calls": [
+        "pick.cursor",
+        "pick.viewport_center"
+      ],
+      "result": {
+        "values": {},
+        "first": {
+          "name": "pick.viewport_center",
+          "value": {
+            "point": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "unavailable fact memoized and omitted",
+      "params": {
+        "values": [
+          "unknown",
+          "unknown"
+        ],
+        "first": [
+          "unknown"
+        ]
+      },
+      "facts": {},
+      "calls": [
+        "unknown"
+      ],
+      "result": {
+        "values": {},
+        "first": null
+      }
+    }
+  ]
+}

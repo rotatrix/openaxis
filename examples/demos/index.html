@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAxis Demos</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #111;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 48px;
+      font-size: 15px;
+    }
+    section.category {
+      max-width: 800px;
+      width: 100%;
+      margin-bottom: 40px;
+    }
+    section.category > h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #778;
+      margin-bottom: 4px;
+    }
+    section.category > .blurb {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 14px;
+    }
+    ul.demo-list {
+      list-style: none;
+      border: 1px solid #333;
+      border-radius: 12px;
+      background: #1a1a2e;
+      overflow: hidden;
+    }
+    ul.demo-list li + li { border-top: 1px solid #26263e; }
+    a.row {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding: 14px 20px;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.15s;
+    }
+    a.row:hover { background: #222240; }
+    .with-docs { display:flex; align-items:center; }
+    .with-docs .row { flex:1; }
+    .docs-link { color:#9cf; margin-right:20px; font-size:13px; }
+    .row h3 {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 0 0 10em;
+    }
+    .row p {
+      font-size: 13px;
+      color: #999;
+      line-height: 1.5;
+    }
+    @media (max-width: 640px) {
+      a.row { flex-wrap: wrap; gap: 6px 14px; }
+      .row h3 { flex-basis: auto; }
+      .row p { flex-basis: 100%; }
+    }
+    nav.topnav {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      gap: 20px;
+      align-items: baseline;
+      margin-bottom: 40px;
+      font-size: 14px;
+    }
+    nav.topnav a {
+      color: #99a;
+      text-decoration: none;
+    }
+    nav.topnav a:hover { color: #eee; }
+    nav.topnav .brand {
+      font-weight: 700;
+      font-size: 15px;
+      color: #eee;
+      margin-right: auto;
+    }
+    nav.topnav .current { color: #eee; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="https://openaxis.rotatrix.com/">OpenAxis</a>
+    <a href="https://openaxis.rotatrix.com/">SDK docs &amp; other-language examples</a>
+    <span class="current">Demos</span>
+  </nav>
+
+  <h1>OpenAxis Browser Demos</h1>
+  <p class="subtitle">Run browser demos of OpenAxis, the Rotatrix output protocol.</p>
+
+  <section class="category">
+    <h2>TypeScript Reference App</h2>
+    <p class="blurb">A complete integration you can run in your browser.</p>
+    <ul class="demo-list">
+      <li class="with-docs"><a class="row" href="typescript-demo-3d-app.html"><h3>TypeScript</h3><p>Run the reference 3D application in your browser.</p></a><a class="docs-link" href="https://openaxis.rotatrix.com/guide/navigation-quickstart/#typescript">Docs</a></li>
+    </ul>
+  </section>
+
+  <section class="category">
+    <h2>Navigation &amp; Object Manipulation</h2>
+    <p class="blurb">Focused examples of camera navigation and object editing.</p>
+    <ul class="demo-list">
+      <li><a class="row" href="cube.html"><h3>Cube</h3><p>Object manipulation: rotate, translate, and snap a cube.</p></a></li>
+      <li><a class="row" href="viewspace-2d.html"><h3>2D View Navigation</h3><p>Pan and zoom a workflow canvas with a fixed view orientation.</p></a></li>
+    </ul>
+  </section>
+
+  <section class="category">
+    <h2>Viewer Integrations</h2>
+    <p class="blurb">OpenAxis navigation in richer viewers and third-party applications.</p>
+    <ul class="demo-list">
+      <li><a class="row" href="sketchfab.html"><h3>Sketchfab Viewer</h3><p>Explore Staff Picks with orbit or free-camera navigation.</p></a></li>
+      <li><a class="row" href="splats.html"><h3>Splat Explorer</h3><p>Explore a scanned courtyard with Gaussian splats, or load your own scans.</p></a></li>
+    </ul>
+  </section>
+
+  <section class="category">
+    <h2>API Examples</h2>
+    <p class="blurb">Focused examples of supported SDK APIs.</p>
+    <ul class="demo-list">
+      <li><a class="row" href="basic.html"><h3>Axis Streaming API</h3><p>Receive raw axis input and implement your own behavior.</p></a></li>
+    </ul>
+  </section>
+
+  <section class="category">
+    <h2>Experiments</h2>
+    <p class="blurb">Explorations of motion and coordinate mappings; not reference integrations.</p>
+    <ul class="demo-list">
+      <li><a class="row" href="se2-3d.html"><h3>Camera Locomotion</h3><p>Explore movement and rotation in a z-up scene.</p></a></li>
+      <li><a class="row" href="skybox.html"><h3>Skybox</h3><p>Explore unrestricted camera rotation, including roll.</p></a></li>
+      <li><a class="row" href="se2-2d.html"><h3>SE2 World-Frame</h3><p>Explore planar rotation and world-aligned translation.</p></a></li>
+    </ul>
+  </section>
+</body>
+</html>

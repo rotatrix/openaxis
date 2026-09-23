@@ -1,0 +1,15 @@
+packages:
+  - docs
+  - ts/*
+  - examples/*
+
+onlyBuiltDependencies:
+  - esbuild
+  - puppeteer
+  - sharp
+
+# chokidar 4.0.2/4.0.3 were published without the provenance attestation
+# earlier versions had (maintainer publish-setup change, verified benign);
+# without this, installs fail for anyone with trust-policy=no-downgrade.
+trustPolicyExclude:
+  - chokidar@4.0.3

@@ -1,0 +1,15 @@
+<script>
+  async function selectDemoLanguage() {
+    const label = ({ '#python': 'Python', '#csharp': 'C#', '#typescript': 'TypeScript', '#cpp': 'C++' } as Record<string, string>)[location.hash];
+    if (!label || !document.getElementById('run-a-demo')) return;
+    await customElements.whenDefined('starlight-tabs');
+    const tabs = document.querySelector('starlight-tabs[data-sync-key="sdk-language"]');
+    const tab = [...(tabs?.querySelectorAll<HTMLAnchorElement>('[role="tab"]') ?? [])]
+      .find(item => item.textContent?.trim() === label);
+    tab?.click();
+    document.getElementById('run-a-demo')?.scrollIntoView();
+  }
+  selectDemoLanguage();
+  window.addEventListener('hashchange', selectDemoLanguage);
+  document.addEventListener('astro:page-load', selectDemoLanguage);
+</script>

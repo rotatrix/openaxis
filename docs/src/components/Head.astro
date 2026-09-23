@@ -1,0 +1,14 @@
+---
+import DefaultHead from '@astrojs/starlight/components/Head.astro';
+---
+<DefaultHead {...Astro.props} />
+<script>
+  async function renderDiagrams() {
+    if (!document.querySelector('pre.mermaid:not([data-processed])')) return;
+    const { default: mermaid } = await import('mermaid');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' });
+    await mermaid.run({ querySelector: 'pre.mermaid:not([data-processed])' });
+  }
+  renderDiagrams();
+  document.addEventListener('astro:page-load', renderDiagrams);
+</script>

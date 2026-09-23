@@ -1,0 +1,222 @@
+---
+title: Application context and focus
+description: Publish application context changes through events, with reconnect replay and shutdown cleanup.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import cppSource from '../../../../../examples/cpp_demo_3d_app/integration.hpp?raw';
+import SourceLink from '../../../components/SourceLink.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+Application tags tell Rotatrix what the application is doing, so the user's
+profile can select suitable input behavior. A change of workspace, tool or edit
+operation can change those tags. This applies to Navigation and Axis Streaming.
+
+The [demos](/guide/navigation-quickstart/) add object-interaction tags during
+an edit and remove them when it ends. Their integrations publish application
+state through `OpenAxisConnectionManager`.
+
+## Tags and metadata
+
+Tags travel in a metadata snapshot alongside capabilities and focus. Tags describe
+available interactions; capabilities identify supported protocol features; focus
+helps Rotatrix select the active recipient. Each update replaces the complete
+tag set, so persistent tags remain in every snapshot.
+
+The demos use these tag sets:
+
+| Application state | Complete tag set |
+| --- | --- |
+| Camera navigation, including a selected object | demo-3d-services |
+| Active object edit | demo-3d-services, interaction.object.rotate, interaction.object.translate |
+| Edit accepted or cancelled | demo-3d-services |
+
+Press F in any viewer to add `navigation.hint.free_camera` to the current
+tag set, or remove it to return to orbit. The `demo-3d-services` tag and any edit
+tags remain present; both camera modes share the same object bindings. See
+[Free camera movement](/guide/free-camera/).
+
+The interaction tags authorize rotation and translation; the user's profile
+chooses between them. Selection alone does not start an edit. See
+[Object manipulation](/guide/object-manipulation/) for native operation ownership.
+
+The metadata provider supplies the latest snapshot on connection and refresh.
+Application state is read on the thread where the application's API is valid.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The manager calls `MyOpenAxisIntegration._metadata()` on startup/reconnect and
+refresh. It uses `self.app` to inspect the active edit and focus; `_tags()` builds
+the complete tag list for that snapshot:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('    def _tags('), integrationSource.indexOf('    def _operation_changed(')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration._tags" />
+
+The Python demo's GUI and networking share one asyncio thread, so the provider reads application state directly.
+
+</TabItem>
+<TabItem label="C#">
+
+Application events call `MyOpenAxisIntegration.PublishMetadata()`. It reads
+`app` on the UI thread and replaces the snapshot that the manager will read:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("    void PublishMetadata()"), csharpSource.indexOf("    async Task ObserveUpdate(")).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.PublishMetadata" />
+
+The C# manager reads metadata on a networking thread. The integration publishes
+an immutable snapshot with `Volatile.Write`; its provider uses `Volatile.Read`
+so networking never needs to access scene objects.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`metadata()` reads current edit and focus state on the browser event loop. The manager calls it on connection and refresh. `refresh` observes failures and tracks pending updates.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region metadata') + '// #region metadata'.length, typescriptSource.indexOf('// #endregion metadata')).replace(/^ {2}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.metadata" />
+
+</TabItem>
+<TabItem label="C++">
+
+`MyOpenAxisIntegration::update` updates its metadata snapshot after native events and calls
+`connection.refresh_metadata()` when tags or focus change. Edits add both object-interaction tags; free-camera preference adds its own tag. GLFW waits for events or the next scheduled deadline when idle.
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('    void update(bool focused)'), cppSource.lastIndexOf('};')).replace(/^ {4}/gm, '').trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+## Connect the application events
+
+An operation-change event first invalidates navigation bound to the previous edit,
+then requests a metadata refresh. Focus changes use the same refresh path without
+changing the operation identity.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+During `MyOpenAxisIntegration.start()`, the existing `client` and `session` are
+retained and update-task tracking is initialized as described in the
+[connection recipe](/guide/connection-shutdown/). These hooks are registered
+before networking starts:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('        app.on_navigation_changed ='), integrationSource.indexOf('        self.networking =')).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration.start" />
+
+An edit transition calls `_operation_changed`; a focus transition calls
+`_metadata_changed`. Both are bound methods on that integration instance.
+`_metadata_sent` is a task completion callback that observes any send error:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('    def _operation_changed('), integrationSource.indexOf('    async def stop(')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration._operation_changed" />
+
+</TabItem>
+<TabItem label="C#">
+
+The `MyOpenAxisIntegration` constructor registers equivalent hooks. The manager's
+provider reads the snapshot, while native events call the integration's methods:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        app.ContextChanged ="), csharpSource.indexOf("        app.ToggleDiagnostics =")).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.MyOpenAxisIntegration" />
+
+`PublishMetadata` schedules a refresh only while ready. Every update task is tracked and its failure observed:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("    async Task ObserveUpdate("), csharpSource.indexOf("    public async Task StopAsync(")).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.ObserveUpdate" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`start()` registers native notifications before starting the connection supervisor. The host implements `on` and returns an unsubscribe callback. Operation changes invalidate the previous binding before refreshing metadata.
+
+<Code lang="typescript" code={'this.detach.push(\n  this.app.on("navigation", this.refresh),\n' + typescriptSource.slice(typescriptSource.indexOf('      this.app.on("operation"'), typescriptSource.indexOf('      this.app.on("invalidate"')).replace(/^ {4}/gm, '').trimEnd() + '\n);'} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.start" />
+
+</TabItem>
+<TabItem label="C++">
+
+The GLFW loop calls `MyOpenAxisIntegration::update` after native input. Edit transitions increment `MyApplication::generation` and notify `session.context_changed()`; captured contexts prevent old output from targeting the replacement edit. Camera and object input send their own native-change notifications. The scheduler executes deferred drains and deadlines.
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+Application events request refreshes. While offline, the latest application state
+is retained for the next connection. While connected, `OpenAxisConnectionManager`
+serializes announcements. The integration observes refresh failures so a
+disconnect during an update is reported; reconnect publishes current state.
+
+## Report focus through window events
+
+Focus identifies whether the application is receiving user interaction. It is a
+separate metadata field, updated when window focus changes. Unrelated events,
+such as a resize, do not require a metadata refresh.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The application emits `on_focus_changed` when its window gains or loses focus.
+The integration routes that event to `_metadata_changed()`; the provider reads
+`app.has_focus()` when producing the snapshot.
+
+</TabItem>
+<TabItem label="C#">
+
+The application emits `FocusChanged` when its window gains or loses focus.
+`PublishMetadata()` reads `app.IsActive` on the UI thread and publishes a new
+snapshot for the connection manager.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`start()` listens to window `focus` and `blur`; both invoke `refresh`. Its metadata provider reads `document.hasFocus()` at send time, including initial connection and reconnect. The returned cleanup removes both listeners. For an embedded canvas, adapt focus policy to your application.
+
+</TabItem>
+<TabItem label="C++">
+
+The demo reads GLFW window focus after native events and stores it in the manager's metadata snapshot. The scheduler continues handling transport and deadlines while unfocused. Adapt the focus predicate for embedded viewports or modal tools.
+
+</TabItem>
+</Tabs>
+
+## Reconnect and shutdown
+
+`OpenAxisConnectionManager` reads a fresh snapshot after each successful connection.
+If the user changes tools or ends an edit while offline, reconnect announces that
+current state without replaying obsolete transitions.
+
+In C++, setters update desired metadata and the scheduler delivers connection changes.
+
+The other SDKs' refresh APIs are `refresh_metadata()` in Python, `RefreshMetadataAsync()` in C#, and
+`refreshMetadata()` in TypeScript. They publish the complete snapshot when ready
+and do nothing offline. Refresh failures return to the caller.
+
+The [connection and shutdown recipe](/guide/connection-shutdown/)
+shows how event callbacks and pending updates are cleaned up before the
+application closes.
+
+## Verify
+
+- Start an edit and confirm both interaction tags appear; accept or cancel and
+  confirm they disappear while the profile tag remains.
+- Switch focus and confirm only actual focus changes send a focus update.
+- Leave the application idle and confirm no metadata updates are scheduled.
+- Disconnect, change state, and reconnect. The first snapshot must describe new state.
+- Shut down with an update pending. It must finish or be cancelled before native
+  resources disappear, and detached events must schedule no work.
+
+For automated commands and coverage, use the demo READMEs: [Python](/examples/python_demo_3d_app/README.md), [C#](/examples/csharp_demo_3d_app/README.md), [TypeScript](/examples/typescript_demo_3d_app/README.md), and [C++](/examples/cpp_demo_3d_app/README.md).

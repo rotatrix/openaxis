@@ -1,0 +1,129 @@
+---
+title: Local session logs
+description: Capture SDK and integration messages, find session files, and control diagnostic output.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Use this recipe when your integration needs diagnostic files that users can
+inspect or share. Start with an installed SDK and an integration that already
+connects to Rotatrix, such as the [navigation quickstart](/guide/navigation-quickstart/).
+
+The SDK logger collects SDK events and messages written by your integration.
+Python, C# and C++ write a separate rotating file for each session. TypeScript
+routes messages to the browser console or supplied UI sinks; it does not write
+native files, including when imported in Node.
+
+## Configure your integration
+
+Configure the logger before starting the client or navigation session. Choose a
+stable lowercase client identifier, such as `my-app`, and supply your integration's
+version. The SDK provides its own version automatically. These illustrative
+startup snippets add a host message and a console mirror.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+```python
+from openaxis.logging import configure_logging
+
+log = configure_logging(
+    "my-app", client_version="2.3.4",
+    sinks=[lambda level, message: print(f"{level}: {message}")],
+)
+log.info("Integration started")
+```
+
+See the [Python reference integration](/source/python_demo_3d_app/integration.py/).
+
+</TabItem>
+<TabItem label="C#">
+
+```csharp
+using OpenAxis.Diagnostics;
+
+var log = DiagnosticLog.Configure("my-app", clientVersion: "2.3.4");
+log.Message += (level, message) => Console.WriteLine($"{level}: {message}");
+log.Write("info", "Integration started");
+```
+
+See the [C# reference integration](/source/csharp_demo_3d_app/MyOpenAxisIntegration.cs/).
+
+</TabItem>
+<TabItem label="TypeScript">
+
+```ts
+import { configureLogging } from "@openaxis/sdk";
+
+const log = configureLogging("my-app", { clientVersion: "2.3.4" });
+log.write("info", "Integration started");
+```
+
+The default sink is the console. Supply a `sinks` array in the options to replace
+it with callbacks that receive `(level, message)`.
+See the [TypeScript reference integration](/source/typescript_demo_3d_app/integration.ts/).
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+#include <openaxis/logging.hpp>
+#include <iostream>
+
+auto log = openaxis::DiagnosticLog::configure("my-app", {}, "2.3.4");
+log->sinks.push_back([](const std::string &level, const std::string &message) {
+    std::clog << level << ": " << message << '\n';
+});
+log->write("info", "Integration started");
+```
+
+See the [C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+SDK lifecycle and navigation events use the configured logger automatically.
+Existing explicit diagnostic callbacks override that route: remove them to use
+the default, or forward their messages to the logger. Setting up a mirror does
+not require a callback on every SDK component.
+
+Close the logger after the client and navigation session stop: `log.close()` in
+Python and TypeScript, `log.Dispose()` in C#, or `log->close()` in C++.
+
+## Find native files
+
+Open Rotatrix's log viewer and select the integration's session. To locate files
+directly, use the [OS directory table and path overrides](/reference/sdk-logging/#native-filesystem-profile-python-c-c).
+Set `ROTATRIX_LOG_DIR` before startup when you need a known directory for a test.
+Check that the host sandbox and Rotatrix can both access it. Browser messages
+appear in the console or your configured sink.
+
+Read the session header to identify the SDK and integration versions, then
+look for your host message and connection events. For record syntax, file naming,
+rotation and retention, use the [logging contract](/reference/sdk-logging/).
+Keep slow UI sinks off the calling thread by enqueueing their work.
+
+## Enable detailed output and handle failures
+
+Debug messages are off by default. Enable them on the logger using Python's
+`level="debug"` configuration option, C#'s `log.DebugLogging = true`, C++'s
+`log->debug = true`, or TypeScript's `{ debug: true }` option. If the diagnostic
+collector has its own filtering level, enable debug there too; the logger cannot
+recover events the collector did not emit.
+
+File errors are best effort: navigation continues and mirrors still receive
+messages. Inspect Python's `log.error`, C#'s `log.Error`, or C++'s `log->error()`
+when a file is missing or stops updating. Check the directory permissions and configuration against the
+[logging contract](/reference/sdk-logging/).
+
+## Verify the setup
+
+Start the integration, locate its new session file, and check the header's SDK,
+client and integration versions. Write a host message and trigger an SDK lifecycle
+event; both should appear. Start another instance to confirm it gets a separate
+file. For TypeScript, check the chosen console or UI sink instead.
+
+The [SDK logging contract](/reference/sdk-logging/) defines exact record,
+rotation and lifecycle behavior. Shared fixtures and native interoperability
+tests cover formatting, retention, rotation and cross-language cleanup; verify
+host permissions and sandbox visibility in the actual application.

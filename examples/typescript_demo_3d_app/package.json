@@ -1,0 +1,20 @@
+{
+  "name": "openaxis-typescript-demo-3d-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "tsx --test test_app.ts"
+  },
+  "dependencies": {
+    "@openaxis/sdk": "workspace:*",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/three": "^0.180.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}

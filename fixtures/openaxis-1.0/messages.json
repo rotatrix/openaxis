@@ -1,0 +1,2775 @@
+{
+  "schema_version": 1,
+  "protocol": "openaxis/1.0",
+  "valid_messages": [
+    {
+      "name": "hello diagnostic versions",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": "2.3.4",
+        "sdk": {
+          "name": "example-sdk",
+          "version": "1.0 RC1"
+        },
+        "target": {
+          "app": "Inventor",
+          "app_version": "2027.1"
+        }
+      }
+    },
+    {
+      "name": "request.id boundary 9007199254740991",
+      "message": {
+        "type": "request",
+        "id": 9007199254740991,
+        "method": "example",
+        "params": {}
+      }
+    },
+    {
+      "name": "response.id boundary 9007199254740991",
+      "message": {
+        "type": "response",
+        "id": 9007199254740991,
+        "result": {}
+      }
+    },
+    {
+      "name": "motion_start.gesture_id boundary 9007199254740991",
+      "message": {
+        "type": "motion_start",
+        "gesture_id": 9007199254740991
+      }
+    },
+    {
+      "name": "motion_end.gesture_id boundary 9007199254740991",
+      "message": {
+        "type": "motion_end",
+        "gesture_id": 9007199254740991
+      }
+    },
+    {
+      "name": "frame.seq boundary 9007199254740991",
+      "message": {
+        "type": "frame",
+        "seq": 9007199254740991,
+        "t_us": 0,
+        "values": []
+      }
+    },
+    {
+      "name": "frame.t_us boundary 9007199254740991",
+      "message": {
+        "type": "frame",
+        "seq": 0,
+        "t_us": 9007199254740991,
+        "values": []
+      }
+    },
+    {
+      "name": "camera.pose.applied_delta_id boundary 9007199254740991",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 0,
+        "seq": 0,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": 1,
+        "applied_delta_id": 9007199254740991
+      }
+    },
+    {
+      "name": "object.delta.delta_id boundary 9007199254740991",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 0,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "delta_id": 9007199254740991
+      }
+    },
+    {"name": "hello with Linux namespace PID", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "4026533054:2"}}},
+    {
+      "name": "client hello",
+      "message": { "type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client" }
+    },
+    {
+      "name": "client hello with target",
+      "message": { "type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": { "pid": "18432", "app": "Inventor" } }
+    },
+    {
+      "name": "server hello acknowledgement",
+      "message": { "type": "hello_ack", "proto": "openaxis/1.0", "server_name": "Fixture Server" }
+    },
+    {
+      "name": "heartbeat",
+      "message": { "type": "heartbeat" }
+    },
+    {
+      "name": "client focus declaration",
+      "message": { "type": "focus", "focused": true }
+    },
+    {
+      "name": "protocol error",
+      "message": { "type": "error", "code": "bad_request", "message": "Malformed request" }
+    },
+    {
+      "name": "navigation query request",
+      "message": {
+        "type": "request",
+        "id": 21,
+        "method": "navigation.query",
+        "params": {
+          "gesture_id": 73,
+          "values": ["document.id", "camera.pose"],
+          "first": ["pick.cursor", "pick.viewport_center"]
+        }
+      }
+    },
+    {
+      "name": "command request",
+      "message": {
+        "type": "request",
+        "id": 22,
+        "method": "command.execute",
+        "params": { "name": "navigation.pivot.lock" }
+      }
+    },
+    {
+      "name": "successful response",
+      "message": { "type": "response", "id": 21, "result": { "values": {}, "first": null } }
+    },
+    {
+      "name": "navigation query fact response",
+      "message": {
+        "type": "response",
+        "id": 23,
+        "result": {
+          "values": {
+            "document.id": "fixture-document-1",
+            "world.orientation": {
+              "forward": [0.0, 0.0, -1.0],
+              "up": [0.0, 1.0, 0.0],
+              "handedness": "right"
+            },
+            "camera.pose": {
+              "t": [1.0, 2.0, 3.0],
+              "r": [0.0, 0.0, 0.0],
+              "ortho_extent": 10.0
+            },
+            "viewport.aspect": 1.7777777777777777,
+            "navigation.translation_scale": 5.0,
+            "navigation.preferences": {
+              "lock_roll": true,
+              "lock_translation_plane": false
+            },
+            "selection.bounds": {
+              "min": [-1.0, -2.0, -3.0],
+              "max": [1.0, 2.0, 3.0]
+            }
+          },
+          "first": {
+            "name": "pick.cursor",
+            "value": {
+              "point": [0.5, 0.25, 0.0],
+              "bounds": {
+                "min": [0.0, 0.0, 0.0],
+                "max": [1.0, 1.0, 1.0]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "error response",
+      "message": {
+        "type": "response",
+        "id": 22,
+        "error": { "code": "unavailable", "message": "No pivot has been selected" }
+      }
+    },
+    {
+      "name": "tags",
+      "message": { "type": "tags", "tags": ["app.fixture", "mode.sketch"] }
+    },
+    {
+      "name": "capabilities",
+      "message": { "type": "capabilities", "capabilities": ["navigation", "commands"] }
+    },
+    {
+      "name": "axis subscription",
+      "message": { "type": "subscribe", "axes": ["tx", "ty", "tz", "rx", "ry", "rz"] }
+    },
+    {
+      "name": "axis confirmation",
+      "message": { "type": "axes", "axes": ["tx", "ty", "tz", "rx", "ry", "rz"] }
+    },
+    {
+      "name": "motion start",
+      "message": { "type": "motion_start", "gesture_id": 73 }
+    },
+    {
+      "name": "identifiers beyond signed 32-bit range",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 2147483648,
+        "t": [0.0, 0.0, 0.0],
+        "r": [0.0, 0.0, 0.0],
+        "delta_id": 2147483649
+      }
+    },
+    {
+      "name": "motion end",
+      "message": { "type": "motion_end", "gesture_id": 73 }
+    },
+    {
+      "name": "motion cancellation",
+      "message": { "type": "motion_cancel", "gesture_id": 73, "reason": "context_changed" }
+    },
+    {
+      "name": "viewport settled",
+      "message": { "type": "viewport.settled" }
+    },
+    {
+      "name": "buttons",
+      "message": { "type": "buttons", "buttons": 5 }
+    },
+    {
+      "name": "axis frame",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "t_us": 1234567,
+        "values": [0.1, 0.0, -0.3, 0.0, 0.5, 0.0]
+      }
+    },
+    {
+      "name": "orbit navigation state",
+      "message": { "type": "navigation.state", "gesture_id": 73, "camera": { "mode": "orbit" } }
+    },
+    {
+      "name": "free-camera and object navigation state",
+      "message": {
+        "type": "navigation.state",
+        "gesture_id": 74,
+        "camera": {
+          "mode": "free_camera",
+          "lock_roll": true,
+          "lock_translation_plane": false,
+          "translation_scale": 5.0
+        },
+        "object": { "allow_translation": false, "allow_rotation": true }
+      }
+    },
+    {
+      "name": "perspective camera pose",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 204,
+        "t": [1.0, 2.0, 3.0],
+        "r": [0.1, 0.2, 0.3],
+        "fov": 1.0471975511965976
+      }
+    },
+    {
+      "name": "orthographic camera pose with delta watermark",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [1.5, 2.5, 3.5],
+        "r": [0.0, 0.0, 0.0],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "minimal camera delta",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": [0.0, 0.25, 0.0],
+        "r": [0.0, 0.0, -0.1]
+      }
+    },
+    {
+      "name": "identified orthographic camera delta",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": [0.0, 0.0, 0.0],
+        "r": [0.0, 0.0, 0.0],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera pivot",
+      "message": { "type": "camera.pivot", "gesture_id": 73, "point": [4.0, 5.0, 6.0] }
+    },
+    {
+      "name": "object pose",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [2.0, 3.0, 4.0],
+        "r": [0.2, 0.0, -0.2]
+      }
+    },
+    {
+      "name": "object delta",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [0.5, 0.0, 0.0],
+        "r": [0.0, 0.3, 0.0],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object pivot",
+      "message": { "type": "object.pivot", "gesture_id": 73, "point": [-1.0, 0.0, 1.0] }
+    }
+  ],
+  "invalid_messages": [
+    {"name":"camera_delta_scale_numeric_string","message":{"type":"camera.delta","gesture_id":7,"t":[0,0,0],"r":[0,0,0],"ortho_extent_scale":"1"}},
+    {"name":"camera_delta_scale_boolean","message":{"type":"camera.delta","gesture_id":7,"t":[0,0,0],"r":[0,0,0],"ortho_extent_scale":true}},
+    {
+      "name": "hello client_version rejects null",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": null
+      }
+    },
+    {
+      "name": "hello client_version rejects \"\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": ""
+      }
+    },
+    {
+      "name": "hello client_version rejects \" \\t\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": " \t"
+      }
+    },
+    {
+      "name": "hello client_version rejects 42",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": 42
+      }
+    },
+    {
+      "name": "hello client_version rejects []",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": []
+      }
+    },
+    {
+      "name": "hello client_version rejects {}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "client_version": {}
+      }
+    },
+    {
+      "name": "hello app_version rejects null",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "target": {
+          "app": "Inventor",
+          "app_version": null
+        }
+      }
+    },
+    {
+      "name": "hello app_version rejects \"\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "target": {
+          "app": "Inventor",
+          "app_version": ""
+        }
+      }
+    },
+    {
+      "name": "hello app_version rejects \" \\t\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "target": {
+          "app": "Inventor",
+          "app_version": " \t"
+        }
+      }
+    },
+    {
+      "name": "hello app_version rejects 42",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "target": {
+          "app": "Inventor",
+          "app_version": 42
+        }
+      }
+    },
+    {
+      "name": "hello app_version rejects []",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "target": {
+          "app": "Inventor",
+          "app_version": []
+        }
+      }
+    },
+    {
+      "name": "hello app_version rejects {}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "target": {
+          "app": "Inventor",
+          "app_version": {}
+        }
+      }
+    },
+    {
+      "name": "hello sdk.name rejects null",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": null,
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.name rejects \"\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "",
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.name rejects \" \\t\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": " \t",
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.name rejects 42",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": 42,
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.name rejects []",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": [],
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.name rejects {}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": {},
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.version rejects null",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example",
+          "version": null
+        }
+      }
+    },
+    {
+      "name": "hello sdk.version rejects \"\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example",
+          "version": ""
+        }
+      }
+    },
+    {
+      "name": "hello sdk.version rejects \" \\t\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example",
+          "version": " \t"
+        }
+      }
+    },
+    {
+      "name": "hello sdk.version rejects 42",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example",
+          "version": 42
+        }
+      }
+    },
+    {
+      "name": "hello sdk.version rejects []",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example",
+          "version": []
+        }
+      }
+    },
+    {
+      "name": "hello sdk.version rejects {}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example",
+          "version": {}
+        }
+      }
+    },
+    {
+      "name": "hello invalid sdk null",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": null
+      }
+    },
+    {
+      "name": "hello invalid sdk []",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": []
+      }
+    },
+    {
+      "name": "hello invalid sdk \"sdk\"",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": "sdk"
+      }
+    },
+    {
+      "name": "hello invalid sdk {}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {}
+      }
+    },
+    {
+      "name": "hello invalid sdk {\"name\":\"example\"}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "name": "example"
+        }
+      }
+    },
+    {
+      "name": "hello invalid sdk {\"version\":\"1\"}",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": "Fixture Client",
+        "sdk": {
+          "version": "1"
+        }
+      }
+    },
+    {
+      "name": "request.id boundary 9007199254740992",
+      "message": {
+        "type": "request",
+        "id": 9007199254740992,
+        "method": "example",
+        "params": {}
+      }
+    },
+    {
+      "name": "response.id boundary 9007199254740992",
+      "message": {
+        "type": "response",
+        "id": 9007199254740992,
+        "result": {}
+      }
+    },
+    {
+      "name": "motion_start.gesture_id boundary 9007199254740992",
+      "message": {
+        "type": "motion_start",
+        "gesture_id": 9007199254740992
+      }
+    },
+    {
+      "name": "motion_end.gesture_id boundary 9007199254740992",
+      "message": {
+        "type": "motion_end",
+        "gesture_id": 9007199254740992
+      }
+    },
+    {
+      "name": "frame.seq boundary 9007199254740992",
+      "message": {
+        "type": "frame",
+        "seq": 9007199254740992,
+        "t_us": 0,
+        "values": []
+      }
+    },
+    {
+      "name": "frame.t_us boundary 9007199254740992",
+      "message": {
+        "type": "frame",
+        "seq": 0,
+        "t_us": 9007199254740992,
+        "values": []
+      }
+    },
+    {
+      "name": "camera.pose.applied_delta_id boundary 9007199254740992",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 0,
+        "seq": 0,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": 1,
+        "applied_delta_id": 9007199254740992
+      }
+    },
+    {
+      "name": "object.delta.delta_id boundary 9007199254740992",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 0,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "delta_id": 9007199254740992
+      }
+    },
+    {"name": "invalid process identity 0", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": 18432}}},
+    {"name": "invalid process identity 1", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": true}}},
+    {"name": "invalid process identity 2", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": null}}},
+    {"name": "invalid process identity 3", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": ""}}},
+    {"name": "invalid process identity 4", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "0"}}},
+    {"name": "invalid process identity 5", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "01"}}},
+    {"name": "invalid process identity 6", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "+1"}}},
+    {"name": "invalid process identity 7", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "1\n"}}},
+    {"name": "invalid process identity 8", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": " 1"}}},
+    {"name": "invalid process identity 9", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "1:0"}}},
+    {"name": "invalid process identity 10", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "0:1"}}},
+    {"name": "invalid process identity 11", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "1:02"}}},
+    {"name": "invalid process identity 12", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "1:2:3"}}},
+    {"name": "invalid process identity 13", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "pid:[1]:2"}}},
+    {"name": "invalid process identity 14", "message": {"type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {"pid": "\u0661"}}},
+    {
+      "name": "hello with empty target",
+      "message": { "type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": {} }
+    },
+    {
+      "name": "hello with zero target PID",
+      "message": { "type": "hello", "proto": "openaxis/1.0", "client_name": "Fixture Client", "target": { "pid": 0 } }
+    },
+    {
+      "name": "focus with non-boolean state",
+      "message": { "type": "focus", "focused": 1 }
+    },
+    {
+      "name": "boolean request ID",
+      "message": { "type": "request", "id": true, "method": "navigation.query", "params": {} }
+    },
+    {
+      "name": "response with neither result nor error",
+      "message": { "type": "response", "id": 1 }
+    },
+    {
+      "name": "response with result and error",
+      "message": {
+        "type": "response",
+        "id": 1,
+        "result": {},
+        "error": { "code": "unavailable" }
+      }
+    },
+    {
+      "name": "motion start without gesture ID",
+      "message": { "type": "motion_start" }
+    },
+    {
+      "name": "camera pose without gesture ID",
+      "message": {
+        "type": "camera.pose",
+        "t": [0.0, 0.0, 1.0],
+        "r": [0.0, 0.0, 0.0],
+        "fov": 1.0
+      }
+    },
+    {
+      "name": "camera pose without projection",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 1,
+        "t": [0.0, 0.0, 1.0],
+        "r": [0.0, 0.0, 0.0]
+      }
+    },
+    {
+      "name": "camera pose with two projections",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 1,
+        "t": [0.0, 0.0, 1.0],
+        "r": [0.0, 0.0, 0.0],
+        "fov": 1.0,
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera pose with zero projection",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 1,
+        "t": [0.0, 0.0, 1.0],
+        "r": [0.0, 0.0, 0.0],
+        "fov": 0.0
+      }
+    },
+    {
+      "name": "camera pose with non-finite position",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 1,
+        "t": [0.0, { "$number": "nan" }, 1.0],
+        "r": [0.0, 0.0, 0.0],
+        "fov": 1.0
+      }
+    },
+    {
+      "name": "camera delta with zero extent scale",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 1,
+        "t": [0.0, 0.0, 0.0],
+        "r": [0.0, 0.0, 0.0],
+        "ortho_extent_scale": 0.0
+      }
+    },
+    {
+      "name": "navigation state without a target",
+      "message": { "type": "navigation.state", "gesture_id": 1 }
+    },
+    {
+      "name": "navigation state with unknown camera mode",
+      "message": { "type": "navigation.state", "gesture_id": 1, "camera": { "mode": "fly" } }
+    },
+    {
+      "name": "orbit navigation state with free-camera fields",
+      "message": {
+        "type": "navigation.state",
+        "gesture_id": 1,
+        "camera": { "mode": "orbit", "lock_roll": true }
+      }
+    },
+    {
+      "name": "object pose without gesture ID",
+      "message": {
+        "type": "object.pose",
+        "t": [0.0, 0.0, 0.0],
+        "r": [0.0, 0.0, 0.0]
+      }
+    },
+    {
+      "name": "object delta with non-finite rotation",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 1,
+        "t": [0.0, 0.0, 0.0],
+        "r": [0.0, { "$number": "positive_infinity" }, 0.0]
+      }
+    },
+    {
+      "name": "camera pivot without gesture ID",
+      "message": { "type": "camera.pivot", "point": [0.0, 0.0, 0.0] }
+    },
+    {
+      "name": "camera_pose_t_numeric_string",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          "1",
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "camera_pose_r_numeric_string",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          "1",
+          0,
+          0
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "camera_pose_fov_numeric_string",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": "1"
+      }
+    },
+    {
+      "name": "camera_pose_ortho_extent_numeric_string",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "ortho_extent": "1"
+      }
+    },
+    {
+      "name": "camera_pose_t_boolean",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          true,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "camera_pose_r_boolean",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          true,
+          0,
+          0
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "camera_pose_fov_boolean",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": true
+      }
+    },
+    {
+      "name": "camera_pose_ortho_extent_boolean",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "ortho_extent": true
+      }
+    },
+    {
+      "name": "camera_pose_t_null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          null,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "camera_pose_r_null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          null,
+          0,
+          0
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "camera_pose_fov_null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": null
+      }
+    },
+    {
+      "name": "camera_pose_ortho_extent_null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 7,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "ortho_extent": null
+      }
+    },
+    {
+      "name": "hello.proto missing",
+      "message": {
+        "type": "hello",
+        "client_name": "Fixture Client",
+        "target": {
+          "pid": "18432",
+          "app": "Inventor"
+        }
+      }
+    },
+    {
+      "name": "hello.proto null",
+      "message": {
+        "type": "hello",
+        "proto": null,
+        "client_name": "Fixture Client",
+        "target": {
+          "pid": "18432",
+          "app": "Inventor"
+        }
+      }
+    },
+    {
+      "name": "hello.proto wrong type",
+      "message": {
+        "type": "hello",
+        "proto": {},
+        "client_name": "Fixture Client",
+        "target": {
+          "pid": "18432",
+          "app": "Inventor"
+        }
+      }
+    },
+    {
+      "name": "hello.client_name missing",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "target": {
+          "pid": "18432",
+          "app": "Inventor"
+        }
+      }
+    },
+    {
+      "name": "hello.client_name null",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": null,
+        "target": {
+          "pid": "18432",
+          "app": "Inventor"
+        }
+      }
+    },
+    {
+      "name": "hello.client_name wrong type",
+      "message": {
+        "type": "hello",
+        "proto": "openaxis/1.0",
+        "client_name": {},
+        "target": {
+          "pid": "18432",
+          "app": "Inventor"
+        }
+      }
+    },
+    {
+      "name": "hello_ack.proto missing",
+      "message": {
+        "type": "hello_ack",
+        "server_name": "Fixture Server"
+      }
+    },
+    {
+      "name": "hello_ack.proto null",
+      "message": {
+        "type": "hello_ack",
+        "proto": null,
+        "server_name": "Fixture Server"
+      }
+    },
+    {
+      "name": "hello_ack.proto wrong type",
+      "message": {
+        "type": "hello_ack",
+        "proto": {},
+        "server_name": "Fixture Server"
+      }
+    },
+    {
+      "name": "hello_ack.server_name missing",
+      "message": {
+        "type": "hello_ack",
+        "proto": "openaxis/1.0"
+      }
+    },
+    {
+      "name": "hello_ack.server_name null",
+      "message": {
+        "type": "hello_ack",
+        "proto": "openaxis/1.0",
+        "server_name": null
+      }
+    },
+    {
+      "name": "hello_ack.server_name wrong type",
+      "message": {
+        "type": "hello_ack",
+        "proto": "openaxis/1.0",
+        "server_name": {}
+      }
+    },
+    {
+      "name": "error.code missing",
+      "message": {
+        "type": "error",
+        "message": "Malformed request"
+      }
+    },
+    {
+      "name": "error.code null",
+      "message": {
+        "type": "error",
+        "code": null,
+        "message": "Malformed request"
+      }
+    },
+    {
+      "name": "error.code wrong type",
+      "message": {
+        "type": "error",
+        "code": {},
+        "message": "Malformed request"
+      }
+    },
+    {
+      "name": "error.message missing",
+      "message": {
+        "type": "error",
+        "code": "bad_request"
+      }
+    },
+    {
+      "name": "error.message null",
+      "message": {
+        "type": "error",
+        "code": "bad_request",
+        "message": null
+      }
+    },
+    {
+      "name": "error.message wrong type",
+      "message": {
+        "type": "error",
+        "code": "bad_request",
+        "message": {}
+      }
+    },
+    {
+      "name": "request.id missing",
+      "message": {
+        "type": "request",
+        "method": "command.execute",
+        "params": {
+          "name": "navigation.pivot.lock"
+        }
+      }
+    },
+    {
+      "name": "request.id null",
+      "message": {
+        "type": "request",
+        "id": null,
+        "method": "command.execute",
+        "params": {
+          "name": "navigation.pivot.lock"
+        }
+      }
+    },
+    {
+      "name": "request.id wrong type",
+      "message": {
+        "type": "request",
+        "id": {},
+        "method": "command.execute",
+        "params": {
+          "name": "navigation.pivot.lock"
+        }
+      }
+    },
+    {
+      "name": "request.method missing",
+      "message": {
+        "type": "request",
+        "id": 22,
+        "params": {
+          "name": "navigation.pivot.lock"
+        }
+      }
+    },
+    {
+      "name": "request.method null",
+      "message": {
+        "type": "request",
+        "id": 22,
+        "method": null,
+        "params": {
+          "name": "navigation.pivot.lock"
+        }
+      }
+    },
+    {
+      "name": "request.method wrong type",
+      "message": {
+        "type": "request",
+        "id": 22,
+        "method": {},
+        "params": {
+          "name": "navigation.pivot.lock"
+        }
+      }
+    },
+    {
+      "name": "response.id missing",
+      "message": {
+        "type": "response",
+        "error": {
+          "code": "unavailable",
+          "message": "No pivot has been selected"
+        }
+      }
+    },
+    {
+      "name": "response.id null",
+      "message": {
+        "type": "response",
+        "id": null,
+        "error": {
+          "code": "unavailable",
+          "message": "No pivot has been selected"
+        }
+      }
+    },
+    {
+      "name": "response.id wrong type",
+      "message": {
+        "type": "response",
+        "id": {},
+        "error": {
+          "code": "unavailable",
+          "message": "No pivot has been selected"
+        }
+      }
+    },
+    {
+      "name": "tags.tags missing",
+      "message": {
+        "type": "tags"
+      }
+    },
+    {
+      "name": "tags.tags null",
+      "message": {
+        "type": "tags",
+        "tags": null
+      }
+    },
+    {
+      "name": "tags.tags wrong type",
+      "message": {
+        "type": "tags",
+        "tags": {}
+      }
+    },
+    {
+      "name": "focus.focused missing",
+      "message": {
+        "type": "focus"
+      }
+    },
+    {
+      "name": "focus.focused null",
+      "message": {
+        "type": "focus",
+        "focused": null
+      }
+    },
+    {
+      "name": "focus.focused wrong type",
+      "message": {
+        "type": "focus",
+        "focused": {}
+      }
+    },
+    {
+      "name": "capabilities.capabilities missing",
+      "message": {
+        "type": "capabilities"
+      }
+    },
+    {
+      "name": "capabilities.capabilities null",
+      "message": {
+        "type": "capabilities",
+        "capabilities": null
+      }
+    },
+    {
+      "name": "capabilities.capabilities wrong type",
+      "message": {
+        "type": "capabilities",
+        "capabilities": {}
+      }
+    },
+    {
+      "name": "subscribe.axes missing",
+      "message": {
+        "type": "subscribe"
+      }
+    },
+    {
+      "name": "subscribe.axes null",
+      "message": {
+        "type": "subscribe",
+        "axes": null
+      }
+    },
+    {
+      "name": "subscribe.axes wrong type",
+      "message": {
+        "type": "subscribe",
+        "axes": {}
+      }
+    },
+    {
+      "name": "axes.axes missing",
+      "message": {
+        "type": "axes"
+      }
+    },
+    {
+      "name": "axes.axes null",
+      "message": {
+        "type": "axes",
+        "axes": null
+      }
+    },
+    {
+      "name": "axes.axes wrong type",
+      "message": {
+        "type": "axes",
+        "axes": {}
+      }
+    },
+    {
+      "name": "motion_start.gesture_id missing",
+      "message": {
+        "type": "motion_start"
+      }
+    },
+    {
+      "name": "motion_start.gesture_id null",
+      "message": {
+        "type": "motion_start",
+        "gesture_id": null
+      }
+    },
+    {
+      "name": "motion_start.gesture_id wrong type",
+      "message": {
+        "type": "motion_start",
+        "gesture_id": {}
+      }
+    },
+    {
+      "name": "motion_end.gesture_id missing",
+      "message": {
+        "type": "motion_end"
+      }
+    },
+    {
+      "name": "motion_end.gesture_id null",
+      "message": {
+        "type": "motion_end",
+        "gesture_id": null
+      }
+    },
+    {
+      "name": "motion_end.gesture_id wrong type",
+      "message": {
+        "type": "motion_end",
+        "gesture_id": {}
+      }
+    },
+    {
+      "name": "motion_cancel.gesture_id missing",
+      "message": {
+        "type": "motion_cancel",
+        "reason": "context_changed"
+      }
+    },
+    {
+      "name": "motion_cancel.gesture_id null",
+      "message": {
+        "type": "motion_cancel",
+        "gesture_id": null,
+        "reason": "context_changed"
+      }
+    },
+    {
+      "name": "motion_cancel.gesture_id wrong type",
+      "message": {
+        "type": "motion_cancel",
+        "gesture_id": {},
+        "reason": "context_changed"
+      }
+    },
+    {
+      "name": "buttons.buttons missing",
+      "message": {
+        "type": "buttons"
+      }
+    },
+    {
+      "name": "buttons.buttons null",
+      "message": {
+        "type": "buttons",
+        "buttons": null
+      }
+    },
+    {
+      "name": "buttons.buttons wrong type",
+      "message": {
+        "type": "buttons",
+        "buttons": {}
+      }
+    },
+    {
+      "name": "frame.seq missing",
+      "message": {
+        "type": "frame",
+        "t_us": 1234567,
+        "values": [
+          0.1,
+          0.0,
+          -0.3,
+          0.0,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "frame.seq null",
+      "message": {
+        "type": "frame",
+        "seq": null,
+        "t_us": 1234567,
+        "values": [
+          0.1,
+          0.0,
+          -0.3,
+          0.0,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "frame.seq wrong type",
+      "message": {
+        "type": "frame",
+        "seq": {},
+        "t_us": 1234567,
+        "values": [
+          0.1,
+          0.0,
+          -0.3,
+          0.0,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "frame.t_us missing",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "values": [
+          0.1,
+          0.0,
+          -0.3,
+          0.0,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "frame.t_us null",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "t_us": null,
+        "values": [
+          0.1,
+          0.0,
+          -0.3,
+          0.0,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "frame.t_us wrong type",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "t_us": {},
+        "values": [
+          0.1,
+          0.0,
+          -0.3,
+          0.0,
+          0.5,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "frame.values missing",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "t_us": 1234567
+      }
+    },
+    {
+      "name": "frame.values null",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "t_us": 1234567,
+        "values": null
+      }
+    },
+    {
+      "name": "frame.values wrong type",
+      "message": {
+        "type": "frame",
+        "seq": 12345,
+        "t_us": 1234567,
+        "values": {}
+      }
+    },
+    {
+      "name": "navigation.state.gesture_id missing",
+      "message": {
+        "type": "navigation.state",
+        "camera": {
+          "mode": "free_camera",
+          "lock_roll": true,
+          "lock_translation_plane": false,
+          "translation_scale": 5.0
+        },
+        "object": {
+          "allow_translation": false,
+          "allow_rotation": true
+        }
+      }
+    },
+    {
+      "name": "navigation.state.gesture_id null",
+      "message": {
+        "type": "navigation.state",
+        "gesture_id": null,
+        "camera": {
+          "mode": "free_camera",
+          "lock_roll": true,
+          "lock_translation_plane": false,
+          "translation_scale": 5.0
+        },
+        "object": {
+          "allow_translation": false,
+          "allow_rotation": true
+        }
+      }
+    },
+    {
+      "name": "navigation.state.gesture_id wrong type",
+      "message": {
+        "type": "navigation.state",
+        "gesture_id": {},
+        "camera": {
+          "mode": "free_camera",
+          "lock_roll": true,
+          "lock_translation_plane": false,
+          "translation_scale": 5.0
+        },
+        "object": {
+          "allow_translation": false,
+          "allow_rotation": true
+        }
+      }
+    },
+    {
+      "name": "camera.pose.gesture_id missing",
+      "message": {
+        "type": "camera.pose",
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.gesture_id null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": null,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.gesture_id wrong type",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": {},
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.t missing",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.t null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": null,
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.t wrong type",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": {},
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.r missing",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.r null",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "r": null,
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.pose.r wrong type",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 73,
+        "seq": 205,
+        "applied_delta_id": 17,
+        "t": [
+          1.5,
+          2.5,
+          3.5
+        ],
+        "r": {},
+        "ortho_extent": 10.0
+      }
+    },
+    {
+      "name": "camera.delta.gesture_id missing",
+      "message": {
+        "type": "camera.delta",
+        "t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.gesture_id null",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": null,
+        "t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.gesture_id wrong type",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": {},
+        "t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.t missing",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.t null",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": null,
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.t wrong type",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": {},
+        "r": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.r missing",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.r null",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": null,
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.delta.r wrong type",
+      "message": {
+        "type": "camera.delta",
+        "gesture_id": 73,
+        "t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": {},
+        "ortho_extent_scale": 0.8,
+        "delta_id": 17
+      }
+    },
+    {
+      "name": "camera.pivot.gesture_id missing",
+      "message": {
+        "type": "camera.pivot",
+        "point": [
+          4.0,
+          5.0,
+          6.0
+        ]
+      }
+    },
+    {
+      "name": "camera.pivot.gesture_id null",
+      "message": {
+        "type": "camera.pivot",
+        "gesture_id": null,
+        "point": [
+          4.0,
+          5.0,
+          6.0
+        ]
+      }
+    },
+    {
+      "name": "camera.pivot.gesture_id wrong type",
+      "message": {
+        "type": "camera.pivot",
+        "gesture_id": {},
+        "point": [
+          4.0,
+          5.0,
+          6.0
+        ]
+      }
+    },
+    {
+      "name": "camera.pivot.point missing",
+      "message": {
+        "type": "camera.pivot",
+        "gesture_id": 73
+      }
+    },
+    {
+      "name": "camera.pivot.point null",
+      "message": {
+        "type": "camera.pivot",
+        "gesture_id": 73,
+        "point": null
+      }
+    },
+    {
+      "name": "camera.pivot.point wrong type",
+      "message": {
+        "type": "camera.pivot",
+        "gesture_id": 73,
+        "point": {}
+      }
+    },
+    {
+      "name": "object.pose.gesture_id missing",
+      "message": {
+        "type": "object.pose",
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ]
+      }
+    },
+    {
+      "name": "object.pose.gesture_id null",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": null,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ]
+      }
+    },
+    {
+      "name": "object.pose.gesture_id wrong type",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": {},
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ]
+      }
+    },
+    {
+      "name": "object.pose.t missing",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ]
+      }
+    },
+    {
+      "name": "object.pose.t null",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": null,
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ]
+      }
+    },
+    {
+      "name": "object.pose.t wrong type",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": {},
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ]
+      }
+    },
+    {
+      "name": "object.pose.r missing",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ]
+      }
+    },
+    {
+      "name": "object.pose.r null",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": null
+      }
+    },
+    {
+      "name": "object.pose.r wrong type",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": {}
+      }
+    },
+    {
+      "name": "object.delta.gesture_id missing",
+      "message": {
+        "type": "object.delta",
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.gesture_id null",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": null,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.gesture_id wrong type",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": {},
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.t missing",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.t null",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": null,
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.t wrong type",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": {},
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.r missing",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.r null",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": null,
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.delta.r wrong type",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": {},
+        "delta_id": 18
+      }
+    },
+    {
+      "name": "object.pivot.gesture_id missing",
+      "message": {
+        "type": "object.pivot",
+        "point": [
+          -1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "object.pivot.gesture_id null",
+      "message": {
+        "type": "object.pivot",
+        "gesture_id": null,
+        "point": [
+          -1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "object.pivot.gesture_id wrong type",
+      "message": {
+        "type": "object.pivot",
+        "gesture_id": {},
+        "point": [
+          -1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "object.pivot.point missing",
+      "message": {
+        "type": "object.pivot",
+        "gesture_id": 73
+      }
+    },
+    {
+      "name": "object.pivot.point null",
+      "message": {
+        "type": "object.pivot",
+        "gesture_id": 73,
+        "point": null
+      }
+    },
+    {
+      "name": "object.pivot.point wrong type",
+      "message": {
+        "type": "object.pivot",
+        "gesture_id": 73,
+        "point": {}
+      }
+    },
+    {
+      "name": "tags rejects 'abc'",
+      "message": {
+        "type": "tags",
+        "tags": "abc"
+      }
+    },
+    {
+      "name": "tags rejects [1]",
+      "message": {
+        "type": "tags",
+        "tags": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "tags rejects ['']",
+      "message": {
+        "type": "tags",
+        "tags": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "tags rejects [True]",
+      "message": {
+        "type": "tags",
+        "tags": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "capabilities rejects 'abc'",
+      "message": {
+        "type": "capabilities",
+        "capabilities": "abc"
+      }
+    },
+    {
+      "name": "capabilities rejects [1]",
+      "message": {
+        "type": "capabilities",
+        "capabilities": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "capabilities rejects ['']",
+      "message": {
+        "type": "capabilities",
+        "capabilities": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "capabilities rejects [True]",
+      "message": {
+        "type": "capabilities",
+        "capabilities": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "subscribe rejects 'abc'",
+      "message": {
+        "type": "subscribe",
+        "axes": "abc"
+      }
+    },
+    {
+      "name": "subscribe rejects [1]",
+      "message": {
+        "type": "subscribe",
+        "axes": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "subscribe rejects ['']",
+      "message": {
+        "type": "subscribe",
+        "axes": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "subscribe rejects [True]",
+      "message": {
+        "type": "subscribe",
+        "axes": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "axes rejects 'abc'",
+      "message": {
+        "type": "axes",
+        "axes": "abc"
+      }
+    },
+    {
+      "name": "axes rejects [1]",
+      "message": {
+        "type": "axes",
+        "axes": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "axes rejects ['']",
+      "message": {
+        "type": "axes",
+        "axes": [
+          ""
+        ]
+      }
+    },
+    {
+      "name": "axes rejects [True]",
+      "message": {
+        "type": "axes",
+        "axes": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "object.pose forbids fov",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ],
+        "fov": 1
+      }
+    },
+    {
+      "name": "object.pose forbids ortho_extent",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ],
+        "ortho_extent": 1
+      }
+    },
+    {
+      "name": "object.pose forbids ortho_extent_scale",
+      "message": {
+        "type": "object.pose",
+        "gesture_id": 73,
+        "seq": 91,
+        "applied_delta_id": 18,
+        "t": [
+          2.0,
+          3.0,
+          4.0
+        ],
+        "r": [
+          0.2,
+          0.0,
+          -0.2
+        ],
+        "ortho_extent_scale": 1
+      }
+    },
+    {
+      "name": "object.delta forbids fov",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18,
+        "fov": 1
+      }
+    },
+    {
+      "name": "object.delta forbids ortho_extent",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18,
+        "ortho_extent": 1
+      }
+    },
+    {
+      "name": "object.delta forbids ortho_extent_scale",
+      "message": {
+        "type": "object.delta",
+        "gesture_id": 73,
+        "t": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.3,
+          0.0
+        ],
+        "delta_id": 18,
+        "ortho_extent_scale": 1
+      }
+    },
+    {
+      "name": "free camera requires lock_roll",
+      "message": {
+        "type": "navigation.state",
+        "gesture_id": 1,
+        "camera": {
+          "mode": "free_camera",
+          "lock_translation_plane": false
+        }
+      }
+    },
+    {
+      "name": "free camera requires lock_translation_plane",
+      "message": {
+        "type": "navigation.state",
+        "gesture_id": 1,
+        "camera": {
+          "mode": "free_camera",
+          "lock_roll": false
+        }
+      }
+    },
+    {
+      "name": "projection null is not omission",
+      "message": {
+        "type": "camera.pose",
+        "gesture_id": 1,
+        "t": [
+          0,
+          0,
+          0
+        ],
+        "r": [
+          0,
+          0,
+          0
+        ],
+        "fov": 1,
+        "ortho_extent": null
+      }
+    }
+  ],
+  "unknown_messages": [
+    {
+      "name": "future 1.x extension",
+      "message": { "type": "com.example.viewport.metadata", "value": 1 }
+    },
+    {
+      "name": "removed 0.2 profile",
+      "message": { "type": "profile", "mode": "orbit", "active": [] }
+    },
+    {
+      "name": "removed 0.2 world orientation",
+      "message": {
+        "type": "world_orientation",
+        "forward": [0.0, 0.0, -1.0],
+        "up": [0.0, 1.0, 0.0]
+      }
+    },
+    {
+      "name": "removed 0.2 ext envelope",
+      "message": { "type": "ext", "name": "q", "id": 1, "data": {} }
+    },
+    {
+      "name": "unknown _open owns its fields",
+      "message": {
+        "type": "_open",
+        "gesture_id": "vendor-token"
+      }
+    },
+    {
+      "name": "unknown constructor owns its fields",
+      "message": {
+        "type": "constructor",
+        "gesture_id": "vendor-token"
+      }
+    },
+    {
+      "name": "unknown vendor.example owns its fields",
+      "message": {
+        "type": "vendor.example",
+        "gesture_id": "vendor-token"
+      }
+    }
+  ]
+}

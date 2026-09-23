@@ -1,0 +1,14 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { renderDocFragment } from '../../../../../scripts/render-docs.mjs';
+import source from '../../../../../LICENSE?raw';
+// Fence the GPL's plain-text layout for display without changing LICENSE.
+const formatted = source.replace(
+  /(^## GNU General Public License version 3\r?\n)([\s\S]*)/m,
+  (_, heading, text) => heading + '\n```text\n' + text.replace(/^(?:\r?\n)+|(?:\r?\n)+$/g, '') + '\n```\n',
+);
+const { title, headings, body } = renderDocFragment({ src: 'LICENSE' }, formatted);
+---
+<StarlightPage frontmatter={{ title, description: 'The Elastic License 2.0 and GPLv3 options for OpenAxis.' }} headings={headings} hasSidebar>
+  <div class="sl-markdown-content" set:html={body} />
+</StarlightPage>

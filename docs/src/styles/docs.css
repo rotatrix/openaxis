@@ -1,0 +1,5 @@
+:root { --sl-content-width: 52rem; }
+/* Neutral diagram colors remain legible under either documentation theme. */
+pre.mermaid { background: #fff; color: #17212b; padding: 1rem; overflow-x: auto; border-radius: .5rem; }
+/* Preserve readable labels; narrow screens can scroll the sequence horizontally. */
+pre.mermaid svg { height: auto; min-width: 70rem; }

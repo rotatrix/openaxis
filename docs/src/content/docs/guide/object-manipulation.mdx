@@ -1,0 +1,177 @@
+---
+title: Object manipulation
+description: Walk through a rigid-object edit using the demo 3D applications and SDK object adapter.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import cppSource from '../../../../../examples/cpp_demo_3d_app/integration.hpp?raw';
+import SourceLink from '../../../components/SourceLink.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+Object navigation changes an object's position and orientation while the
+application retains control of the edit: which object is affected, when changes
+are accepted, and what undo restores.
+
+The [demos](/guide/navigation-quickstart/) edit one cube at a time. Their
+integrations use [dynamic application tags](/guide/dynamic-tags/)
+to make object interactions available while the edit is active.
+
+## Try it
+
+1. Click an object to select it. Camera navigation can use that selection for its pivot.
+2. Double-click or press **Enter** to start editing.
+3. **Left-drag** translates; **middle/right-drag** rotates; the **wheel** moves in depth.
+4. With Rotatrix connected, its ball rotates the object; **Shift** translates it.
+   The profile's camera controls remain available.
+5. **Enter** accepts; **Escape** restores the starting pose; **U** undoes an accepted edit.
+
+Native controls work independently of OpenAxis. The integration announces object
+interaction tags only while an edit is active.
+
+## Object adapter setup
+
+The object adapter connects `NavigationSession` to the application's object
+read and write APIs. Its context identifies an edit operation, so pending input
+cannot affect a later edit, even if both edits involve the same object.
+
+The integration supplies this adapter and an object observation callback to the
+same `NavigationSession` that handles the camera. Application events report
+native object movement and changes to the active edit.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+MyOpenAxisIntegration.start() passes object_adapter=object_adapter and object_observation=object_adapter.read. Native events call native_object_changed() and context_changed().
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('class MyObjectAdapter:'), integrationSource.indexOf('class MyObjectCapture:')).trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyObjectAdapter" />
+
+</TabItem>
+<TabItem label="C#">
+
+`MyOpenAxisIntegration` has already constructed `adapter`, `objects` and
+`scheduler`. Its constructor supplies the object adapter and observation callback
+to the existing session. Native event wiring follows [concurrent input](/guide/concurrent-input/)
+and [dynamic tags](/guide/dynamic-tags/):
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        session = new NavigationSession("), csharpSource.indexOf("        connection = new OpenAxisConnectionManager")).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.MyOpenAxisIntegration" />
+
+`objects` is a `MyObjectAdapter(app)`. The `NavigationSession` uses its captured edit identity
+to read and write the same native object throughout a gesture:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("public sealed class MyObjectAdapter"), csharpSource.indexOf("public sealed class MyObjectCapture")).trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyObjectAdapter" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The constructor passes `objectAdapter(app)` and an `objectObservation` callback to the camera session. `start()` connects native object changes and operation invalidation. The adapter binds the exact `MyEdit` instance, which the host must replace for every edit.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region object') + '// #region object'.length, typescriptSource.indexOf('// #endregion object')).replace(/^ {0}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyObjectAdapter" />
+
+</TabItem>
+<TabItem label="C++">
+
+The integration passes a separate `MyObjectAdapter` through `options.object_adapter`. It captures the explicit edit target and operation generation; camera/object acknowledgement state remains independent.
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('struct MyObjectAdapter'), cppSource.indexOf('struct MyOpenAxisIntegration')).trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+Each edit creates a new stable operation identity, even for the same cube. The
+adapter checks that identity before output can be applied. Return actual pose
+readback so native changes and constraints can be reconciled. See
+[comparison precision](/guide/concurrent-input/#comparison-precision)
+for choosing tolerances.
+
+## Object queries
+
+Rotatrix needs the object's current pose and world-space bounds to calculate its
+movement. The adapter creates a query capture from those application values;
+`NavigationSession` asks its resolver for the requested facts.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('class MyObjectCapture:'), integrationSource.indexOf('class MyConnectionStatus:')).trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyObjectCapture" />
+
+</TabItem>
+<TabItem label="C#">
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("public sealed class MyObjectCapture"), csharpSource.indexOf("public static class Values")).trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyObjectCapture" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+In `beginQuery` above, pose and world bounds are captured for that edit. `initialObservation()` returns a detached pose; `resolve` answers `object.pose` or `object.bounds` and returns `UNAVAILABLE` for other names. The host must include the object transform in its bounds.
+
+</TabItem>
+<TabItem label="C++">
+
+`MyObjectCapture` supplies the captured object pose and bounds for the original edit target. Selection bounds remain a separate camera-query fact. JSON `null` marks unavailable facts.
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+Camera queries and picking also use the updated geometry. Camera and object
+streams retain separate pose/correction state in the shared session.
+
+## Operation lifetime
+
+The application owns accept, cancel and undo. A gesture can end while the edit
+remains active; multiple gestures can contribute to one edit. Accept saves the
+starting pose for undo, cancel restores it, and shutdown cancels an unfinished edit.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+MyObjectOperation contains the target index and starting pose. The native application retains this operation until accept/cancel; MyObjectAdapter only binds it for SDK work. Inspect [application.py](/examples/python_demo_3d_app/application.py) for the transaction and undo handlers.
+
+</TabItem>
+<TabItem label="C#">
+
+The application's `BeginEdit()` creates an edit identity and saves the starting
+pose. `FinishEdit()` accepts or cancels it, then invokes `ContextChanged` so the
+integration invalidates the old binding and refreshes the interaction tags.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The runnable `MyApplication` owns its edit transaction. On begin, create a fresh `MyEdit` containing the target and a detached `initialPose`, then emit `operation`. Accept records undo state; cancel restores `initialPose`. Both clear `app.edit` and emit `operation`. Undo is a separate native operation. Session gesture cleanup only releases navigation; it does not accept or cancel an edit. Cancel unfinished edits during host shutdown.
+
+</TabItem>
+<TabItem label="C++">
+
+The [C++ application](/source/cpp_demo_3d_app/application.cpp/) stores the edit target and starting pose. `begin_edit`, `finish_edit` and `undo_edit` own the native transaction and increment its generation. `MyObjectAdapter::capture_context()` captures that generation and the edit target. Gesture end does not accept the edit; Enter/left-click accepts, Escape/right-click cancels, and U undoes.
+
+</TabItem>
+</Tabs>
+
+An integration binds its application's own transaction and target. Constraints
+are reported through actual pose readback; see
+[adapter contracts](/reference/navigation-hosts/).
+
+## Verify
+
+Alternate object edits and camera gestures, then accept or cancel while input is
+active. Check undo, transformed picking/bounds, and a second edit of the same cube.
+Old output must leave a later operation untouched.
+
+For automated commands and coverage, use the demo READMEs: [Python](/examples/python_demo_3d_app/README.md), [C#](/examples/csharp_demo_3d_app/README.md), [TypeScript](/examples/typescript_demo_3d_app/README.md), and [C++](/examples/cpp_demo_3d_app/README.md).

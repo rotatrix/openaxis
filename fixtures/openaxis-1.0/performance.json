@@ -1,0 +1,565 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "performance_summary_coalescing_and_timing",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "advance",
+          "time": 0.125
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 11
+        },
+        {
+          "op": "advance",
+          "time": 0.25
+        },
+        {
+          "op": "pose",
+          "seq": 2,
+          "x": 12
+        },
+        {
+          "op": "advance",
+          "time": 0.375
+        },
+        {
+          "op": "pose",
+          "seq": 3,
+          "x": 13
+        },
+        {
+          "op": "expect",
+          "performance": []
+        },
+        {
+          "op": "advance",
+          "time": 0.5
+        },
+        {
+          "op": "on_read",
+          "events": [
+            {
+              "op": "advance",
+              "time": 0.5625
+            }
+          ]
+        },
+        {
+          "op": "on_write",
+          "events": [
+            {
+              "op": "advance",
+              "time": 0.6875
+            }
+          ]
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": []
+        },
+        {
+          "op": "advance",
+          "time": 0.75
+        },
+        {
+          "op": "end"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "reason=motion_end ",
+              "duration=750.0 ms",
+              "camera: poses 3, coalesced 2, writes 1 ok/0 failed",
+              "input gap 125.0/125.0 [2]",
+              "queue wait 125.0/125.0 [1]",
+              "observation 62.5/62.5 [1]",
+              "apply 125.0/125.0 [1]",
+              "object: no activity",
+              "camera responsiveness: turnaround avg 312.5 ms, max 312.5 ms [1 applied]; pending poses replaced 66.7%"
+            ]
+          ]
+        },
+        {
+          "op": "close"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "summaries": 1
+        }
+      ]
+    },
+    {
+      "name": "performance_late_write_belongs_to_retired_gesture",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "on_write",
+          "events": [
+            {
+              "op": "start",
+              "gesture": 8
+            },
+            {
+              "op": "advance",
+              "time": 0.125
+            }
+          ]
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 12
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "reason=superseded ",
+              "camera: poses 1, coalesced 0, writes 1 ok/0 failed",
+              "apply 125.0/125.0",
+              "camera responsiveness: turnaround avg 125.0 ms, max 125.0 ms [1 applied]"
+            ]
+          ]
+        },
+        {
+          "op": "end",
+          "gesture": 8
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "camera responsiveness: turnaround avg 125.0 ms, max 125.0 ms [1 applied]"
+            ],
+            [
+              "gesture=8 ",
+              "reason=motion_end ",
+              "camera: no activity"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "performance_cancellation_discards_pending_pose",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 12
+        },
+        {
+          "op": "context_changed"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "reason=context_changed ",
+              "camera: poses 1, coalesced 0, writes 0 ok/0 failed",
+              "camera responsiveness: no updates applied; pending poses replaced 0.0%"
+            ]
+          ]
+        },
+        {
+          "op": "close"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "summaries": 1
+        }
+      ]
+    },
+    {
+      "name": "performance_start_end_before_first_drain",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "end"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "reason=motion_end ",
+              "duration=0.0 ms"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "performance_object_stream_is_independent",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query",
+          "values": [
+            "camera.pose",
+            "object.pose"
+          ]
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "object_pose",
+          "seq": 1,
+          "x": 1
+        },
+        {
+          "op": "object_pose",
+          "seq": 2,
+          "x": 2
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 12
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": []
+        },
+        {
+          "op": "end"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "camera: poses 1, coalesced 0, writes 1 ok/0 failed",
+              "object: poses 2, coalesced 1, writes 1 ok/0 failed",
+              "camera responsiveness: turnaround avg 0.0 ms, max 0.0 ms [1 applied]; pending poses replaced 0.0%",
+              "object responsiveness: turnaround avg 0.0 ms, max 0.0 ms [1 applied]; pending poses replaced 50.0%"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "performance_failed_apply_is_timed",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "on_write",
+          "events": [
+            {
+              "op": "advance",
+              "time": 0.125
+            },
+            {
+              "op": "write_error"
+            }
+          ]
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 12
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "reason=camera_write_failed ",
+              "camera: poses 1, coalesced 0, writes 0 ok/1 failed",
+              "apply 125.0/125.0 [1]",
+              "camera responsiveness: no updates applied; pending poses replaced 0.0%"
+            ]
+          ]
+        },
+        {
+          "op": "close"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "summaries": 1
+        }
+      ]
+    },
+    {
+      "name": "performance_close_summarizes_idle_gesture",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "advance",
+          "time": 0.125
+        },
+        {
+          "op": "close"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "gesture=7 ",
+              "reason=closed ",
+              "duration=125.0 ms",
+              "camera: no activity",
+              "object: no activity"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "performance_pivot_wait_preserves_latest_pose_timing",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query"
+        },
+        {
+          "op": "orbit"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "advance",
+          "time": 0.125
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 11
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "advance",
+          "time": 0.25
+        },
+        {
+          "op": "pose",
+          "seq": 2,
+          "x": 12
+        },
+        {
+          "op": "advance",
+          "time": 0.375
+        },
+        {
+          "op": "pose",
+          "seq": 3,
+          "x": 13
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "writes": [],
+          "performance": []
+        },
+        {
+          "op": "advance",
+          "time": 0.5
+        },
+        {
+          "op": "pivot"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "end"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "writes": [
+            13
+          ],
+          "performance": [
+            [
+              "camera: poses 3, coalesced 2, writes 1 ok/0 failed",
+              "queue wait 125.0/125.0 [1]",
+              "camera responsiveness: turnaround avg 125.0 ms, max 125.0 ms [1 applied]; pending poses replaced 66.7%"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "turnaround_preserves_arrival_during_write_and_excludes_idle",
+      "events": [
+        {
+          "op": "start",
+          "gesture": 7
+        },
+        {
+          "op": "query"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "advance",
+          "time": 20
+        },
+        {
+          "op": "on_write",
+          "events": [
+            {
+              "op": "advance",
+              "time": 20.125
+            },
+            {
+              "op": "pose",
+              "seq": 2,
+              "x": 12
+            },
+            {
+              "op": "advance",
+              "time": 20.25
+            }
+          ]
+        },
+        {
+          "op": "pose",
+          "seq": 1,
+          "x": 11
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "advance",
+          "time": 30
+        },
+        {
+          "op": "pose",
+          "seq": 3,
+          "x": 12
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "end"
+        },
+        {
+          "op": "drain"
+        },
+        {
+          "op": "expect",
+          "performance": [
+            [
+              "camera responsiveness: turnaround avg 187.5 ms, max 250.0 ms [2 applied]; pending poses replaced 0.0%",
+              "camera: poses 3, coalesced 0, writes 2 ok/0 failed"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

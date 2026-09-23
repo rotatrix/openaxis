@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenAxis TypeScript demo 3D app</title>
+  <style>
+    * {box-sizing:border-box} body {margin:0;overflow:hidden;background:#141f2e;color:white;font:16px system-ui,sans-serif}
+    canvas {display:block;touch-action:none} #help,#status,#diagnostics-output {position:fixed;pointer-events:none;z-index:10000}
+    #help {left:30px;top:20px;right:20px} h2 {color:#6cf;font-size:17px;font-weight:500;margin:0;line-height:1.5}
+    #edit-label {height:30px;color:#ff59d9;font-size:18px;visibility:hidden}
+    #controls {display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:24px;row-gap:12px;align-items:start}
+    #mouse-help,#keyboard-help,#rotatrix-help {white-space:pre-wrap;line-height:1.5}
+    #status {left:30px;bottom:16px;font-size:14px}
+    #diagnostics-output {left:30px;top:290px;font:13px/1.4 monospace;white-space:pre-wrap;max-height:calc(100vh - 345px);overflow:hidden;text-shadow:0 1px 3px #000}
+  </style>
+</head>
+<body>
+  <div id="help"><div id="edit-label">EDITING OBJECT</div><div id="controls"><h2>MOUSE</h2><div id="mouse-help"></div><h2>KEYBOARD</h2><div id="keyboard-help"></div><h2>ROTATRIX:</h2><span id="rotatrix-help"></span></div></div>
+  <div id="diagnostics-output"></div>
+  <script type="module" src="./lib/demo-3d-app.ts"></script>
+</body>
+</html>

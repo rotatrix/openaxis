@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "scenarios": [
+    {"name":"correction_timeout_without_new_server_messages", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"native_camera","x":12},{"op":"drain"},
+      {"op":"expect","writes":[],"deltas":1,"cancels":0},
+      {"op":"advance","time":0.5},{"op":"drain"},{"op":"expect","cancels":0},
+      {"op":"advance","time":2},{"op":"drain"},{"op":"expect","writes":[],"deltas":1,"cancels":1},
+      {"op":"advance","time":3},{"op":"drain"},{"op":"expect","cancels":1}
+    ]},
+    {"name":"retired_timer_cannot_cancel_replacement_gesture", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"native_camera","x":12},{"op":"drain"},{"op":"expect","deltas":1},
+      {"op":"start","gesture":8},{"op":"query","gesture":8},{"op":"drain"},
+      {"op":"advance","time":2},{"op":"drain"},{"op":"expect","cancels":0},
+      {"op":"pose","x":14,"seq":1,"gesture":8},{"op":"drain"},{"op":"expect","writes":[14],"cancels":0}
+    ]},
+    {"name":"enqueue_only_and_latest_pose_wins", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"pose","x":11,"seq":1},{"op":"pose","x":12,"seq":2},{"op":"pose","x":13,"seq":3},
+      {"op":"expect","writes":[],"pending":1,"cancels":0},
+      {"op":"drain"},{"op":"expect","writes":[13],"pending":0,"cancels":0}
+    ]},
+    {"name":"duplicate_and_older_sequences_are_ignored", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"pose","x":12,"seq":2},{"op":"drain"},
+      {"op":"pose","x":13,"seq":2},{"op":"pose","x":14,"seq":1},{"op":"drain"},
+      {"op":"expect","writes":[12],"cancels":0},
+      {"op":"pose","x":15,"seq":4},{"op":"pose","x":16,"seq":3},{"op":"drain"},
+      {"op":"expect","writes":[12,15],"cancels":0}
+    ]},
+    {"name":"context_change_retires_queued_write", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"pose","x":12,"seq":1},{"op":"context_changed"},{"op":"drain"},
+      {"op":"expect","writes":[],"cancels":1},
+      {"op":"pose","x":13,"seq":2},{"op":"drain"},{"op":"expect","writes":[],"cancels":1}
+    ]},
+    {"name":"close_retires_queued_write", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"pose","x":12,"seq":1},{"op":"close"},{"op":"drain"},
+      {"op":"expect","writes":[],"pending":0}
+    ]},
+    {"name":"replacement_gesture_retires_queued_write", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"pose","x":12,"seq":1},{"op":"start","gesture":8},{"op":"query","gesture":8},{"op":"drain"},
+      {"op":"pose","x":13,"seq":2,"gesture":7},{"op":"drain"},
+      {"op":"expect","writes":[],"cancels":0},
+      {"op":"pose","x":14,"seq":3,"gesture":8},{"op":"drain"},{"op":"expect","writes":[14],"cancels":0}
+    ]},
+    {"name":"host_callback_can_replace_gesture", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"on_write","events":[{"op":"start","gesture":8}]},
+      {"op":"pose","x":12,"seq":1},{"op":"drain"},
+      {"op":"pose","x":13,"seq":2},{"op":"drain"},
+      {"op":"expect","writes":[12],"cancels":0},
+      {"op":"query","gesture":8},{"op":"drain"},
+      {"op":"pose","x":14,"seq":3,"gesture":8},{"op":"drain"},{"op":"expect","writes":[12,14],"cancels":0}
+    ]},
+    {"name":"unchanged_frames_do_not_write", "events":[
+      {"op":"start","gesture":7},{"op":"query"},{"op":"drain"},
+      {"op":"pose","x":10,"seq":1},{"op":"drain"},{"op":"expect","writes":[],"cancels":0},
+      {"op":"pose","x":11,"seq":2},{"op":"drain"},
+      {"op":"pose","x":11,"seq":3},{"op":"drain"},{"op":"expect","writes":[11],"cancels":0}
+    ]}
+  ]
+}

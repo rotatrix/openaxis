@@ -1,0 +1,215 @@
+---
+title: Connection recovery and shutdown
+description: Add status, reconnect handling and orderly teardown to Navigation or Axis Streaming integrations.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import SourceLink from '../../../components/SourceLink.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+After running either the [Navigation quickstart](/guide/navigation-quickstart/)
+or the [Axis Streaming quickstart](/guide/axis-streaming/), use this recipe to
+show connection status, recover when Rotatrix restarts, and stop pending work
+before your application releases its resources. The quickstarts include client
+creation and initial connection; this page assumes that client already exists.
+
+Connection management is shared by both interfaces. All four SDKs use
+`OpenAxisConnectionManager`. The connection
+owner reconnects the same client and announces current application metadata.
+
+| Integration | What stays attached across retries | What is announced again |
+| --- | --- | --- |
+| Axis Streaming | Axis-name and frame callbacks | Tags, subscribed axes and focus |
+| Navigation | `NavigationSession` and its application adapters | Tags, navigation capability and focus |
+| Both | Both sets of handlers on the same client | Navigation capability plus the axis subscription, tags and focus |
+
+Axis Streaming has no navigation session or pivot cleanup. Navigation keeps its
+session attached during retries and closes it only when the integration stops.
+
+## Connection state
+
+The manager reports `connecting`, `ready`, `retrying` and `stopped`. `ready` means
+connection startup and metadata announcements have completed. The integration
+uses these notifications to update the application's status display.
+
+The excerpts below show status handling in the Navigation demos. Their connection
+manager and status callbacks also apply to Axis Streaming: retain its input
+callbacks and axis subscription instead of adding navigation objects. The
+[TypeScript streaming example](/examples/typescript/axis-streaming.ts) shows
+the same manager with an axis subscription and no navigation session.
+
+## Connect and report status
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+`MyOpenAxisIntegration.start()` creates the manager with `MyConnectionStatus(app)` as its status callback.
+Its `client` and `session` are retained for the integration's lifetime; `self._metadata` reads
+the current application state, and the registered callbacks publish later changes:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf("        self.connection = OpenAxisConnectionManager("), integrationSource.indexOf("    def _tags(")).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration.start" />
+
+The manager invokes this callback whenever connection state changes. The handler
+uses the application API to display that state and any retry delay:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('class MyConnectionStatus:'), integrationSource.indexOf('class MyOpenAxisIntegration:')).trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyConnectionStatus" />
+
+</TabItem>
+<TabItem label="C#">
+
+The constructor connects the manager to the metadata snapshot and status handler:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        connection = new OpenAxisConnectionManager"), csharpSource.indexOf("        app.CameraChanged =")).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.MyOpenAxisIntegration" />
+
+The manager invokes `MyOpenAxisIntegration.StatusChanged` on its networking
+thread. The handler posts to the application's scheduler before changing the UI:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("    void StatusChanged("), csharpSource.indexOf("    void PublishMetadata()")).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.StatusChanged" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The browser integration creates its manager once, after attaching its session. `onState` updates the host UI on the browser event loop.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('    this.connection = new OpenAxisConnectionManager'), typescriptSource.indexOf('// #endregion setup')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.constructor" />
+
+`MyOpenAxisIntegration.start()` starts the connection loop after host
+initialization. `onState` reports status through the application API.
+
+</TabItem>
+<TabItem label="C++">
+
+Include `<openaxis/connection_manager.hpp>`. Keep the client and its scheduler alive
+until the manager has stopped. Supply current application metadata through a callback:
+
+```cpp
+OpenAxisConnectionManager connection(client, {[&] { return metadata; }});
+connection.on_state = [&](const ConnectionStatus& status) {
+    // Update the application's connection indicator.
+};
+connection.start();
+```
+
+Here `metadata` is a `ConnectionMetadata` snapshot owned by the integration.
+Supply `OpenAxisClientOptions::scheduler` for deferred delivery and deadlines.
+`connection.start()` is nonblocking; `connection.on_state` reports manager
+progress, while `client.on_error` reports transport errors. A client-bound
+`NavigationSession` attaches itself and receives connection transitions automatically.
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+The metadata provider describes current capabilities, tags, axis subscriptions and focus. The
+[dynamic tags recipe](/guide/dynamic-tags/) explains how application
+events refresh it while connected.
+
+## Recover current application state
+
+Keep the connection owner alive while Rotatrix is unavailable. It retries and
+publishes a fresh metadata snapshot after reconnecting. If a user changes tools
+or focus while offline, announce that current state rather than replaying old
+transitions. See [application context and focus](/guide/dynamic-tags/) for the
+event wiring.
+
+For Axis Streaming, replace the saved axis order when a new axis announcement
+arrives and reset any rate-integration timing at connection and gesture boundaries.
+Otherwise an idle interval can become a large movement on the first new frame.
+For Navigation, the session invalidates old connection work; retain the same
+session rather than attaching another on each reconnect.
+
+## Shutdown
+
+Networking and queued callbacks can still refer to application resources. The
+integration stops new events and waits for pending work before destroying those
+resources, so callbacks cannot access a closed application.
+
+For either interface, detach native event producers, stop networking, and await
+the run task and any outstanding metadata updates. Retain objects referenced by
+callbacks until that work finishes.
+
+| Language | Stop the connection owner |
+| --- | --- |
+| Python | Await `connection.stop()` and the retained networking task. If an owned task has not started yet, cancel and await it instead. The quickstart's console loop is cancelled by Ctrl+C. |
+| C# | Await `connection.StopAsync()` and the task returned by `StartAsync()`, or cancel the quickstart's stopping token. Keep the UI dispatcher running while queued work needs it. |
+| TypeScript | Await `connection.stop()` and the retained run promise. The streaming helper returns a cleanup function that also removes focus listeners and awaits metadata updates. |
+| C++ | Call `connection.stop()` on the application thread before destroying callback state; it joins networking and may finish pending callbacks synchronously. |
+
+An Axis Streaming integration can then release its input callbacks and native
+resources. A Navigation integration also closes its session and drains native
+cleanup while its scheduler, adapters and viewport still exist.
+
+### Navigation cleanup in the demos
+
+The following complete stop methods include the shared transport teardown plus
+Navigation-specific edit cancellation, session closure and graphics cleanup.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+Before destroying its window, the application's run loop awaits
+`MyOpenAxisIntegration.stop()`. Its fields refer to the `NavigationSession`, networking task
+and updates retained during startup:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('    async def stop(')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration.stop" />
+
+</TabItem>
+<TabItem label="C#">
+
+The frame loop pumps its dispatcher while awaiting `MyOpenAxisIntegration.StopAsync()`
+before closing the raylib window:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("    public async Task StopAsync()")).trimEnd().replace(/\r?\n}$/, '').replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.StopAsync" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The application awaits `MyOpenAxisIntegration.stop()` while its viewport remains
+available for deferred marker cleanup. A browser page-unload handler cannot
+reliably await networking cleanup; this path is for application-controlled teardown.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region stop') + '// #region stop'.length, typescriptSource.indexOf('// #endregion stop')).replace(/^ {2}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.stop" />
+
+</TabItem>
+<TabItem label="C++">
+
+Stop native event subscriptions first. While the host still exists, call `connection.stop()` to join networking and fail outstanding RPCs, then `session.close()` to clear pivots and invalidate scheduled navigation work. The native scheduler must outlive both objects. Destroy the integration before its native window. The reference app cancels unfinished native object edits, stops/closes the SDK and removes application callbacks during shutdown. C++ close is synchronous, not awaited.
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+See [connection management](/reference/connection-lifecycle/) for retry
+policy and ownership. The application separately releases its native event handlers
+when the window closes.
+
+For a faster edit and test loop, use this teardown path in a development reload
+command. See [reloading during development](/guide/reloading-during-development/) for choosing
+a reload mechanism and defining which changes require an application restart.
+
+## Verify
+
+- Start the application before Rotatrix. It should connect when Rotatrix becomes available.
+- Restart Rotatrix while the application remains open. The integration should reconnect and announce current state.
+- For Axis Streaming, confirm a new axis announcement is processed before frames and reconnecting does not integrate the disconnected interval.
+- Close the application during a retry or metadata update. Networking should stop, with no later callbacks accessing released resources; Navigation overlays should disappear.

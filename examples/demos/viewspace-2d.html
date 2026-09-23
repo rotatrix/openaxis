@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D View Navigation · OpenAxis</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#121c29;color:#eaf4ff;font:16px system-ui}canvas{display:block;width:100vw;height:100vh;touch-action:none;outline:none}
+header{position:fixed;top:24px;left:30px;right:30px;pointer-events:none}h1{font-size:23px;margin:0 0 14px}p{margin:8px 0}strong{color:#6cf;font-size:15px;font-weight:500;display:inline-block;width:110px}nav{position:fixed;bottom:24px;left:30px;right:30px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;font-size:14px}a{color:#9df}button{background:#21364c;color:white;border:1px solid #52718e;border-radius:6px;padding:8px 14px;cursor:pointer}#status{margin-left:auto}
+</style></head>
+<body><canvas id="canvas" tabindex="0" aria-label="Workflow diagram. Drag to pan; wheel to zoom."></canvas>
+<header><h1>2D View Navigation</h1><p><strong>MOUSE</strong>Left-drag: Pan &nbsp; &nbsp; Wheel: Zoom at cursor</p><p><strong>KEYBOARD</strong>R: Reset view</p><p><strong>ROTATRIX</strong><span id="activation"></span></p></header>
+<nav><a href="./">All demos</a><a href="https://openaxis.rotatrix.com/guide/2d-navigation/">2D navigation recipe</a><button id="reset">Reset view</button><span id="zoom"></span><span id="status">Rotatrix: Connecting…</span></nav>
+<script type="module">import { startCanvasDemo } from './lib/viewspace-2d.ts'; startCanvasDemo(document.getElementById('canvas'));</script>
+</body></html>

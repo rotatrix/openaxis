@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Diagnostic overlay visual acceptance fixture</title>
+<style>
+body { margin: 0; background: #171b24; color: white; font: 14px system-ui; }
+nav { padding: 12px; } button { margin-right: 8px; }
+#viewport { width: 100%; height: 65vh; } pre { margin: 12px; }
+</style>
+<nav>Known-scene diagnostic fixture
+<button id="projection">Switch projection</button><button id="move">Move camera</button>
+<button id="shape">Tall viewport</button><button id="visible">Toggle diagnostics</button>
+<button id="context">Switch context</button></nav>
+<div id="viewport"></div><pre id="output"></pre>
+<script type="module">
+import * as THREE from 'three';
+import { NavigationDiagnostics, DIAGNOSTIC_COLORS } from '../../../ts/sdk/src/index.ts';
+import { NavigationDiagnosticOverlay } from '../lib/navigation-diagnostic-overlay.js';
+const viewport = document.querySelector('#viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+viewport.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#171b24');
+scene.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshNormalMaterial()));
+const perspective = new THREE.PerspectiveCamera(50, 1, .1, 100);
+const orthographic = new THREE.OrthographicCamera(-4, 4, 4, -4, .1, 100);
+for (const camera of [perspective, orthographic]) { camera.position.set(5, 4, 7); camera.lookAt(0, 0, 0); }
+let camera = perspective, valid = true;
+const context = {};
+const diagnostics = new NavigationDiagnostics({ enabled: true });
+function capture() {
+  const facts = { 'model.bounds': { min: [-1, -1, -1], max: [1, 1, 1] },
+    'selection.bounds': { min: [-.8, -.8, -.8], max: [.8, .8, .8] },
+    'pick.cursor': { point: [0, 0, 1] }, 'pick.cursor.selection': { point: [0, 0, 1] },
+    'pick.center': null };
+  const query = { requestId: 1, gestureId: 1, values: Object.keys(facts), first: [] };
+  diagnostics.observe('query_started', { query }); diagnostics.setContext(context);
+  for (const [name, value] of Object.entries(facts)) diagnostics.observe('fact', { query, name, value, durationMs: 0 });
+  for (const name of ['pick.cursor', 'pick.cursor.selection']) diagnostics.pick(1, name, { screen: [.2, .2], ray: [[5, 4, 7], [0, 0, 1]] });
+  diagnostics.pick(1, 'pick.center', { screen: [0, 0], ray: [[5, 4, 7], [-4, -3, -8]] });
+  diagnostics.observe('query_completed', { query, result: {}, durationMs: 0 });
+}
+capture();
+const overlay = new NavigationDiagnosticOverlay(renderer.domElement, document.querySelector('#output'), DIAGNOSTIC_COLORS);
+document.querySelector('#projection').onclick = () => { camera = camera === perspective ? orthographic : perspective; };
+document.querySelector('#move').onclick = () => { camera.position.x *= -1; camera.lookAt(0, 0, 0); };
+document.querySelector('#shape').onclick = () => { viewport.style.width = viewport.style.width ? '' : '35vw'; };
+document.querySelector('#visible').onclick = () => { diagnostics.setEnabled(!diagnostics.enabled); if (diagnostics.enabled) capture(); };
+document.querySelector('#context').onclick = () => { valid = !valid; };
+function animate() {
+  const { width, height } = viewport.getBoundingClientRect(), aspect = width / height;
+  renderer.setPixelRatio(devicePixelRatio); renderer.setSize(width, height);
+  perspective.aspect = aspect; orthographic.left = -4 * aspect; orthographic.right = 4 * aspect;
+  camera.updateProjectionMatrix(); renderer.render(scene, camera);
+  overlay.draw(diagnostics, camera, c => valid && c === context);
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</html>

@@ -1,0 +1,139 @@
+---
+title: SDK installation
+description: Install a language SDK or integrate a pinned OpenAxis source checkout.
+---
+
+Use a versioned package when it contains the API your integration needs. For source
+integration, use a checkout pinned to a tested commit or release. Repository APIs
+may be newer than published packages; use documentation from the same revision.
+
+OpenAxis SDKs work with Rotatrix devices. Device verification is handled automatically.
+OpenAxis 1.0 and later require Rotatrix 1.6.0 or newer; see
+[Rotatrix compatibility](/reference/language-support/#rotatrix-compatibility).
+
+Choose your language below. For source builds, first [obtain a checkout](#source-checkouts).
+Source commands run from the OpenAxis checkout root unless noted.
+
+## Python
+
+Requires Python 3.11 or newer. Install the published prerelease:
+
+```sh
+python -m pip install --pre openaxis
+```
+
+For development against a source checkout:
+
+```sh
+python -m pip install -e py/openaxis
+```
+
+Use an exact tested package version in your application's dependency configuration.
+Editable installation is for development; package the SDK and its dependencies
+into the integration's runtime environment for distribution.
+
+<a id="csharp"></a>
+
+## C#
+
+The SDK targets .NET Framework 4.8 and .NET Standard 2.0 and produces one
+`OpenAxis` assembly. The reference raylib application's requirements are separate
+from the SDK's target frameworks.
+
+From your application's project directory, add a source reference:
+
+```sh
+dotnet add reference path/to/openaxis/cs/OpenAxis/OpenAxis.csproj
+```
+
+Restore and build with your normal application build. The SDK declares its
+MessagePack dependency in its project file. Distribute required runtime
+dependencies with the integration.
+
+## TypeScript
+
+Install the package:
+
+```sh
+pnpm add @openaxis/sdk
+```
+
+Commit your lockfile. The client uses the runtime's WebSocket API; geometry and
+protocol helpers are available through separate package exports.
+
+To build the SDK from a checkout, use Node 22.12 or newer and the pnpm version
+declared in the repository's `package.json`:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm -C ts/sdk build
+```
+
+From your application directory, install the built local package with
+`pnpm add ./path/to/openaxis/ts/sdk`. Rebuild the SDK after source changes.
+
+<a id="cpp"></a>
+
+## C++
+
+Requires C++17 and CMake 3.24 or newer. Embed the source in your application's CMake build:
+
+```cmake
+set(OPENAXIS_BUILD_TESTS OFF CACHE BOOL "")
+set(OPENAXIS_BUILD_DEMO OFF CACHE BOOL "")
+add_subdirectory(path/to/openaxis/cpp openaxis-build)
+target_link_libraries(my_app PRIVATE OpenAxis::openaxis)
+```
+
+CMake first looks for installed nlohmann/json 3.11+ and IXWebSocket packages.
+If missing, it fetches the versions pinned in `cpp/CMakeLists.txt`. Set
+`OPENAXIS_FETCH_DEPENDENCIES=OFF` to require preinstalled dependencies for an
+offline or package-managed build.
+
+The fetched IXWebSocket build defaults to `USE_TLS=OFF`; enable TLS in that
+dependency when your endpoint requires it. The default native endpoint uses
+plaintext loopback. GLFW, OpenGL and ImGui are needed only for the reference demo.
+
+After installation, follow the [navigation quickstart](/guide/navigation-quickstart/).
+
+For SDK tests, packaging limitations and parity work, see
+[SDK implementation and parity](/contributing/sdk-architecture/).
+
+## Source checkouts
+
+The public source repository is [rotatrix/openaxis](https://github.com/rotatrix/openaxis).
+The commands below require a published snapshot accessible to you. Before public
+publication, use the source checkout supplied for development. Clone a published
+snapshot for standalone SDK development:
+
+```sh
+git clone https://github.com/rotatrix/openaxis.git
+cd openaxis
+```
+
+Use a tested public release revision and its accompanying documentation.
+In examples above, replace `path/to/openaxis` with the path to this checkout,
+relative to your application project.
+
+### Embed as a Git submodule
+
+A submodule is useful for C++ embedding or integrations maintained against SDK
+source. From your application's repository root:
+
+```sh
+git submodule add https://github.com/rotatrix/openaxis.git third_party/openaxis
+```
+
+Check out your tested release commit inside `third_party/openaxis`, then commit
+`.gitmodules` and the `third_party/openaxis` entry in your application repository.
+Use `third_party/openaxis` in the source-reference or CMake instructions above.
+
+Developers and CI cloning your application initialize its pinned dependencies with:
+
+```sh
+git submodule update --init --recursive
+```
+
+Review and test SDK updates before committing a new submodule revision.
+Submodules include the whole OpenAxis repository; package consumers do not
+need one. See [Git's submodule guide](https://git-scm.com/docs/gitsubmodules).

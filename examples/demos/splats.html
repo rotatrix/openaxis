@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenAxis — Splat Explorer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; overflow: hidden; background: #111a20; color: #edf4f5; font: 14px system-ui, sans-serif; }
+    canvas { display: block; outline: none; }
+    aside { position: fixed; top: 20px; left: 20px; width: 310px; max-width: calc(100vw - 40px); padding: 20px; border: 1px solid #ffffff25; border-radius: 14px; background: #102027ed; backdrop-filter: blur(16px); max-height: calc(100vh - 90px); overflow: auto; }
+    h1 { font-size: 23px; margin: 14px 0 8px; letter-spacing: -.6px; }
+    p { line-height: 1.6; color: #b0c2ca; margin: 8px 0 16px; }
+    a { color: #9cdecf; }
+    .eyebrow { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+    button, .file { background: #29434b; border: 1px solid #ffffff25; color: inherit; border-radius: 7px; padding: 9px 12px; cursor: pointer; font: inherit; }
+    button:hover, .file:hover { background: #365963; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .primary { background: #b7edcf; color: #152c28; width: 100%; font-weight: 650; }
+    .primary:hover { background: #d3f8e2; }
+    .row { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+    .row > button, .row > .file { flex: 1; text-align: center; }
+    input[type=url] { width: 100%; background: #0b171d; color: #fff; border: 1px solid #47606a; padding: 9px; border-radius: 6px; }
+    input[type=range] { width: 100%; accent-color: #b7edcf; }
+    label { line-height: 1.7; }
+    summary { cursor: pointer; margin: 16px 0 10px; }
+    small { display: block; color: #b0c2ca; line-height: 1.6; }
+    #message { padding: 12px 0; color: #b7edcf; line-height: 1.5; }
+    footer { position: fixed; bottom: 15px; left: 20px; right: 20px; font-size: 12px; color: #e5f1ee; text-shadow: 0 1px 4px #000; }
+    #crosshair { position: fixed; top: 50%; left: 50%; pointer-events: none; opacity: .6; }
+    @media (max-width: 600px) { aside { top: 52px; padding: 14px; max-height: 55vh; } }
+  </style>
+</head>
+<body>
+  <aside>
+    <a class="eyebrow" href="./">OpenAxis / Demos</a>
+    <h1>Splat Explorer</h1>
+    <p>Fly through a scanned corner of Ludlow. Explore at your own pace with six degrees of freedom.</p>
+    <button id="ludlow" class="primary">Load Ludlow · ~50 MB</button>
+    <div id="message" role="status" aria-live="polite">Preparing renderer…</div>
+    <label for="speed">Movement speed <output id="speed-value">2.0</output> units/s</label>
+    <input id="speed" type="range" min="0.1" max="15" step="0.1" value="2" />
+    <label for="scheme">Control scheme</label>
+    <select id="scheme" style="width:100%;padding:9px;background:#29434b;color:inherit;border-radius:7px">
+      <option value="left">Left Rotatrix + right mouse</option>
+      <option value="right">Right Rotatrix + left keyboard</option>
+    </select>
+    <small>Horizon locked · no camera roll</small>
+    <div class="row"><button id="fly">Start flying</button><button id="reset">Reset view</button></div>
+    <small id="controls-help"></small>
+    <details><summary>Open another scan</summary>
+      <label class="file" for="file">Choose local splat file</label>
+      <input id="file" type="file" accept=".ply,.spz,.splat,.ksplat,.sog,.rad" hidden />
+      <form id="url-form">
+        <p><label for="url">Direct scan URL</label><input id="url" type="url" placeholder="https://…/scene.spz" required /></p>
+        <button type="submit">Load URL</button>
+      </form>
+      <small>PLY, SPZ, SPLAT, KSPLAT, SOG or RAD. Remote servers must allow cross-origin requests. Local files stay on this computer.</small>
+      <label><input id="flip" type="checkbox" checked /> Flip scan Y/Z axes</label>
+    </details>
+  </aside>
+  <span id="crosshair" aria-hidden="true">+</span>
+  <footer id="credit">Ludlow – Quality Square by <a href="https://superspl.at/scene/ca36efcc" target="_blank" rel="noopener">ijenko / SuperSplat</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · Rendered with Spark</footer>
+  <script type="module" src="./lib/splat-explorer.js"></script>
+</body>
+</html>

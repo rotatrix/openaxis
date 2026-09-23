@@ -1,0 +1,43 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { Code } from '@astrojs/starlight/components';
+import { sourceFiles, sourceLink } from '../../source-files.mjs';
+export function getStaticPaths() {
+  return sourceFiles.map(file => ({ params: { file: file.path }, props: { file } }));
+}
+const { file } = Astro.props;
+---
+<StarlightPage frontmatter={{ title: file.path.split('/').at(-1), description: 'Full source from the working OpenAxis demos.', tableOfContents: false }} headings={[]} hasSidebar>
+  <div class="sl-markdown-content">
+    <p>{{ python: 'Python demo', typescript: 'TypeScript demo', csharp: 'C# demo', cpp: 'C++ demo' }[file.language]} · <a href="/guide/navigation-quickstart/">Navigation quickstart</a> · <a href={`/examples/${file.path}`}>Raw source</a></p>
+    <details><summary>Demo files</summary><ul>{sourceFiles.map(source => <li><a href={sourceLink(source.path)}>{source.path}</a></li>)}</ul></details>
+    <nav aria-label="Source symbols"><ul>{file.symbols.map(symbol => <li><a id={symbol.name} href={`#${symbol.name}`}>{symbol.name}</a></li>)}</ul></nav>
+    <div data-source-viewer data-symbols={JSON.stringify(file.symbols)}>
+      <Code code={file.code} lang={file.language} title={file.path} />
+    </div>
+  </div>
+</StarlightPage>
+<script>
+  function initializeSource() {
+    const viewer = document.querySelector<HTMLElement>('[data-source-viewer]');
+    if (!viewer) return;
+    const symbols: { name: string; start: number; end: number }[] = JSON.parse(viewer.dataset.symbols!);
+    const lines = Array.from(viewer.querySelectorAll<HTMLElement>('.ec-line'));
+    for (const symbol of symbols) {
+      document.getElementById(symbol.name)?.removeAttribute('id');
+      if (lines[symbol.start - 1]) lines[symbol.start - 1].id = symbol.name;
+    }
+    function selectSymbol() {
+      const symbol = symbols.find(symbol => `#${symbol.name}` === location.hash);
+      lines.forEach((line, index) => line.classList.toggle('source-selected', !!symbol && index + 1 >= symbol.start && index + 1 <= symbol.end));
+      if (symbol) lines[symbol.start - 1]?.scrollIntoView({ block: 'start' });
+    }
+    selectSymbol();
+    window.addEventListener('hashchange', selectSymbol);
+  }
+  initializeSource();
+</script>
+<style is:global>
+  [data-source-viewer] .ec-line { scroll-margin-top: 6rem; }
+  [data-source-viewer] .source-selected { background: color-mix(in srgb, var(--sl-color-accent) 18%, transparent); box-shadow: inset 3px 0 var(--sl-color-text-accent); }
+</style>

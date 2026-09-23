@@ -1,0 +1,367 @@
+---
+title: Navigation adapter contracts
+description: Public session entry points, adapter callbacks, scheduling, observations, and lifecycle controls by language.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+C++ uses the synchronous `NavigationAdapter` contract documented in the [C++ section](#c-host-contract). The language-specific tables below use Python/C#/TypeScript names; the C++ section describes the equivalent scheduler and notification methods.
+
+This reference describes the current public session APIs. For a working starting
+point, use the [navigation quickstart](/guide/navigation-quickstart/).
+
+An application adapter connects navigation operations to the application's API.
+It implements the SDK's callbacks for capturing a target, answering scene queries,
+applying poses and displaying pivots. The tables below give the names and result
+contracts for each language.
+
+## Entry points
+
+| SDK | Session | Construction |
+| --- | --- | --- |
+| Python, synchronous application | `openaxis.navigation_session.NavigationSession` | `NavigationSession(client, adapter, scheduler, **options)` |
+| Python, asynchronous camera adapter | `openaxis.async_navigation_session.AsyncNavigationSession` | `AsyncNavigationSession(client, adapter, **options)` |
+| C# | `OpenAxis.Navigation.NavigationSession` | `new NavigationSession(client, adapter, scheduler, ...)` |
+| TypeScript | `NavigationSession` from `@openaxis/sdk` | `new NavigationSession(client, adapter, options)` |
+| TypeScript, asynchronous camera/object adapters | `AsyncNavigationSession` from `@openaxis/sdk` | `new AsyncNavigationSession(client, adapter, options)` |
+| C++, synchronous host | `openaxis::NavigationSession` | `NavigationSession(client, adapter, collector, options)` |
+
+Construction attaches the `NavigationSession` as the exclusive listener for Navigation
+queries, state, poses and pivots. Motion start/end and connection-state notifications
+are delivered to both the session and ordinary listeners, once per listener. Axis
+consumers continue receiving lifecycle boundaries when a session is attached.
+Callback exceptions are isolated and cannot prevent other listeners or cleanup.
+A second session on the same client is rejected until the first detaches. You do not
+manually forward pose/query callbacks to the `NavigationSession`. Keep application startup,
+connection establishment, capabilities, tags and command handlers outside it.
+
+Command and connection listeners can coexist with the session. Do not also
+handle navigation poses or complete navigation queries in another listener.
+
+## Captured context
+
+A context is an **integration-defined handle to the exact application target** used
+by navigation. It keeps pending queries and writes associated with their original
+view or edit when application focus or selection changes.
+
+For example, a CAD context might contain document identity, viewport identity,
+and a native camera handle. The adapter's capture method creates it;
+its validity check verifies that it still names the permitted target.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+```python
+# Illustrative adapter methods: native_document and native_view are your
+# application's handles, captured on its application thread.
+def capture_context(self):
+    return (self.native_document, self.native_view)
+
+def is_current(self, context):
+    document, view = context
+    return document is self.native_document and view is self.native_view
+```
+
+</TabItem>
+<TabItem label="C#">
+
+```csharp
+// Illustrative adapter methods; nativeDocument/nativeView are host handles.
+public object CaptureContext() => (nativeDocument, nativeView);
+public bool IsCurrent(object context)
+{
+    var (document, view) = ((object, object))context;
+    return ReferenceEquals(document, nativeDocument)
+        && ReferenceEquals(view, nativeView);
+}
+```
+
+</TabItem>
+<TabItem label="TypeScript">
+
+```typescript
+// Illustrative adapter methods; nativeDocument/nativeView are host handles.
+captureContext() { return { document: nativeDocument, view: nativeView }; },
+isCurrent(context) {
+  return context.document === nativeDocument && context.view === nativeView;
+},
+```
+
+</TabItem>
+<TabItem label="C++">
+
+`NavigationContext` is `std::any`, so an adapter can capture native handles and
+an operation generation in an application-defined value. Return an empty context
+when no usable target exists.
+
+```cpp
+// Illustrative adapter methods; Context is an application-defined value type.
+openaxis::NavigationContext capture_context() override {
+    return Context{native_document, native_view, edit_generation};
+}
+bool is_current(const openaxis::NavigationContext& context) override {
+    const auto& captured = std::any_cast<const Context&>(context);
+    return captured.document == native_document
+        && captured.view == native_view
+        && captured.generation == edit_generation;
+}
+```
+
+</TabItem>
+</Tabs>
+
+Real code must also detect disposed native objects and replaced viewports.
+If no usable view exists, return the language's absent-context value (`None`,
+`null`, `undefined`, or an empty `NavigationContext`); if a captured target is no longer usable, return false
+from the validity check. Do not redirect old work to a newly active view.
+`NavigationSession` cancels work whose binding becomes invalid.
+
+The session validates the bound context before writes and after adapter calls,
+including synchronous setters that reenter application code. A gesture-scoped
+pose query authorizes writes to that stream. An unscoped diagnostic query cannot
+authorize a write or reset the observation baseline; later queries in the same
+gesture preserve its existing baseline and acknowledgement state.
+
+## Camera adapter
+
+| Responsibility | Python | C# `INavigationAdapter` | TypeScript `NavigationAdapter<C>` |
+| --- | --- | --- | --- |
+| Capture original target | `capture_context()` | `CaptureContext()` | `captureContext()` |
+| Validate target | `is_current(context)` | `IsCurrent(context)` | `isCurrent(context)` |
+| Create query capture | `begin_query(context)` | `BeginQuery(context)` | `beginQuery(context)` |
+| Apply pose | `apply_camera(context, pose, navigation_state, pivot)` | `ApplyCamera(context, desired, state, pivot)` | `applyPose(context, pose, navigation, pivot)` |
+| Display/clear pivot | `show_pivot(context, point)` | `ShowPivot(context, point)` | `showPivot(context, point)` |
+
+Callbacks may raise on an actual application error.
+
+Provide a no-op pivot callback if there is no renderer; Python and TypeScript
+also permit omitting it. The point is absent when clearing a pivot. Drawing failures must
+not be used to signal a failed camera write.
+
+`NavigationSession` passes current navigation feedback and the selected world-space
+pivot into the write. Camera orbit output can wait for its pivot; a free-camera
+write must not invent an orbit pivot.
+
+## Query capture
+
+A query capture supplies scene facts for one query. `NavigationSession` creates
+it through the adapter and calls its resolver only for facts requested by the server.
+
+| Operation | Python | C# `INavigationCapture` | TypeScript `NavigationCapture` |
+| --- | --- | --- | --- |
+| Resolve fact | `resolve(name)` | `Resolve(name)` | `resolve(name)` |
+| Initial camera read | `initial_camera_observation()` | `InitialCameraObservation()` | `initialObservation()` |
+| Missing fact sentinel | `openaxis.navigation.UNAVAILABLE` | `NavigationQuery.Unavailable` | `UNAVAILABLE` from `@openaxis/sdk` |
+
+Return the fact's protocol value, not a native application object. The SDK
+memoizes fact names for one query and evaluates ordered `first` candidates until
+one is available. It owns query completion; a capture does not send a response.
+
+An initial observation must correspond to the captured camera pose, not a new
+read of a different viewport. It seeds reconciliation once for the gesture.
+Later diagnostic queries must not reset that baseline. TypeScript's initial
+observation method is optional; Python/C# captures should return an unknown
+observation when they cannot supply one.
+
+## Object adapter
+
+Supply `object_adapter` in Python or `objectAdapter` in C#/TypeScript to enable object
+output. The constructor still accepts a camera adapter, but an object-only query
+does not require an available camera context.
+
+- Python uses the same capture/validation/query shape, with `apply_object(...)`
+  and `initial_object_observation()` instead of their camera equivalents.
+- C# uses `INavigationObjectAdapter` and `INavigationObjectCapture`, with
+  `ApplyObject(...)` and `InitialObjectObservation()`.
+- TypeScript uses `NavigationObjectAdapter<O>` with `applyPose(...)` and
+  `initialObservation()`. Its context type can differ from the camera context.
+
+Object facts resolve through the object adapter. Bind the original object group or
+native operation, not the latest selection. A missing object target does not
+prevent a camera-only query. Once an object target is bound, invalidating it
+cancels the whole gesture, including camera output.
+
+Native preview, accept/cancel commands, undo records and transactional rollback
+stay outside these callbacks. Pivot cleanup is not a transaction commit.
+
+## Writes and observations
+
+Write results report what the application accepted; observations also detect
+independent native changes. `NavigationSession` uses both to keep the server's
+pose consistent with actual application state.
+
+| SDK | Successful write with known result | Successful write with unknown result |
+| --- | --- | --- |
+| Python | `WriteResult(True, realized_pose)` | `WriteResult(True)` |
+| C# camera | `new NavigationWriteResult(true, realized)` | `new NavigationWriteResult(true)` |
+| C# object | `new ObjectWriteResult(true, realized)` | `new ObjectWriteResult(true)` |
+| TypeScript | `{ success: true, realizedPose }` | `{ success: true }` |
+
+Python uses `CameraPose` / `ObjectPose` from `openaxis.types`. C# uses
+`CameraPoseValue` from `OpenAxis.Geometry` and `ObjectPoseValue` from
+`OpenAxis.Navigation`. TypeScript pose values use `t` and `r`, plus exactly one
+camera projection. Object poses contain only rigid position/orientation.
+
+Return `success: false` or raise if the native write failed. If the write
+committed but subsequent readback failed, return success with an unknown result.
+Keep optional diagnostics outside the write's failure boundary.
+
+`observation` is an optional camera-read callback. It enables camera
+reconciliation and may return no pose when reading is temporarily unavailable.
+**Supply it when using camera realized-pose corrections:** the current camera
+session only feeds realized results into reconciliation when observation is
+configured. Python's async variant awaits this callback.
+
+`object_observation` / `objectObservation` is separately optional. Object write
+results always participate in reconciliation, even without an observation
+callback. In that configuration, the supplied initial `object.pose` fact seeds
+the known pose; the `NavigationSession` does not detect independent native movement before
+an application write. See [reconciliation](/concepts/reconciliation/)
+for unknown-readback recovery and acknowledgement behavior.
+
+`comparison` and `object_comparison` / `objectComparison` customize meaningful
+pose differences. Public helpers are Python `compare` / `compare_object`, C#
+`PoseDifference.Compare`, and TypeScript `comparePoses`. Keep application-specific
+normalization and tolerance policy in the integration.
+In C#, `PoseDifference.Compare` takes camera values; a custom object comparison
+receives two `ObjectPoseValue` values and returns a `PoseDifference`.
+
+## Scheduler and lifecycle
+
+<a id="scheduler-contract"></a>
+
+Python and C# synchronous sessions require an application scheduler.
+A scheduler bridges SDK work to the application's permitted thread. Deferred
+execution lets the current application operation finish before navigation calls
+back into its API.
+
+Both `post(callback)` and C# `Post(Action)` enqueue **deferred** application-thread
+work. They must be safe to call from a transport thread and must never invoke the
+callback inline. Otherwise callbacks can reenter the `NavigationSession` during an unrelated
+native operation.
+
+`post_at(deadline, callback)` / `PostAt` uses absolute monotonic seconds on the
+same clock as the `NavigationSession`. Python defaults to `time.monotonic`; C# defaults to
+`Stopwatch.GetTimestamp() / Stopwatch.Frequency`. Translate this deadline to the
+application timer API; do not treat it as a wall-clock timestamp or millisecond delay.
+
+TypeScript uses `post(callback)` and `postAt(deadline, callback)`. Its default
+scheduler uses microtasks and timers with `performance.now() / 1000`; an integration
+can supply a scheduler and matching clock for its own execution environment.
+
+<a id="application-events"></a>
+
+Native change events schedule observations; they do not manufacture deltas.
+Without a reliable target-change event, periodically call the context check on
+the application thread. Observations also run before output when configured.
+
+| Action | Python synchronous | C# | TypeScript |
+| --- | --- | --- | --- |
+| Observe native camera change | `native_camera_changed()` | `NativeCameraChanged()` | `nativeCameraChanged()` |
+| Observe native object change | `native_object_changed()` | `NativeObjectChanged()` | `nativeObjectChanged()` |
+| Explicitly invalidate gesture context | `context_changed()` | `ContextChanged()` | `contextChanged()` |
+| Check bound target validity | `check_context()` | `CheckContext()` | `checkContext()` |
+| Drain on application thread | `drain()` | `Drain()` | `drain()` |
+| Detach/stop | `close()` | `Dispose()` | `close()` |
+
+Normally the scheduler invokes drains. Explicit drains are for application-thread
+integration points such as modal command loops or shutdown; do not call them on
+the networking thread. Closing can enqueue adapter cleanup, so allow that cleanup
+to run before destroying the application's UI resources.
+
+The synchronous limits default to 32 pending queries, 64 non-pose work items and
+32 work items per drain. Their names are `max_queries`, `max_work`, `drain_budget`
+in Python and `maxQueries`, `maxWork`, `drainBudget` in C#/TypeScript. Camera and
+object streams each have one additional latest-pose slot. The acknowledgement
+timeout defaults to one second and uses the supplied monotonic clock.
+These bounds do not limit network transport buffering or the duration of one
+native adapter call. A blocking native method still blocks its application thread.
+
+## Python asynchronous camera adapter
+
+The async variant has no external scheduler. Construct and call it on its
+owning asyncio event loop. Adapter capture, validation, query creation/resolution,
+camera observation, camera application and pivot methods are awaitable. It uses
+one serialized worker and exposes `await close()`.
+
+Its options are `observation`, `comparison`, `timeout`, `max_work`, `observer`
+and `diagnostics`.
+It currently supports camera navigation only. Close waits for already-issued
+adapter work; the application transport must provide its own operation timeouts. A stale
+remote write can still take effect even when its completion is discarded.
+
+## TypeScript asynchronous adapters
+
+`AsyncNavigationAdapter<C>` and `AsyncNavigationCapture` use the synchronous
+method names above, with awaitable results. `observation` and `objectObservation`
+may return Promises. `objectAdapter` is optional; camera and object host calls
+share one serialized worker but retain independent correction barriers.
+
+Options include `comparison`, `objectComparison`, `timeout`, `maxQueries`,
+`maxWork`, `drainBudget`, `diagnostics`, typed `onEvent` and legacy `observer`.
+There is no external scheduler or custom clock; deadlines use `performance.now()`.
+`checkContext()` schedules validation on the worker rather than overlapping host
+operations. Use `await close()` before disposing the host API. Host operations
+need their own timeouts; retiring a gesture cannot undo a remote write already issued.
+
+## C++ host contract
+
+Include `<openaxis/navigation.hpp>` and construct `NavigationSession(client, adapter)`.
+The session attaches itself as the client's exclusive navigation listener. The client
+and adapters must outlive the session. All public calls and callbacks run on one application
+thread. Reentrant context replacement invalidates old work; nested poses queue until callbacks return.
+
+| Adapter method | Contract |
+| --- | --- |
+| `capture_context()` | Capture the document, viewport and operation in a `NavigationContext`; empty means unavailable. |
+| `is_current(context)` | Validate the original handles and generation. Never substitute the currently active target. |
+| `begin_query(context)` | Return a `std::unique_ptr<NavigationCapture>` for this query's facts and initial observation. |
+| `apply_pose(context, pose, state, pivot)` | Return `WriteResult` with success and optional realized pose. |
+| `show_pivot(context, optional<Vec3>)` | Optional marker presentation; an absent point clears the marker on the captured target. |
+
+`apply_pose` receives `const NavigationPose&`, including `gesture_id`, `seq`
+and optional `applied_delta_id` alongside the pose values. `WriteResult::realized`
+contains a `Pose` observation without protocol message metadata.
+
+`NavigationCapture::resolve(name)` returns a JSON value or `nullptr` for an
+unavailable fact. The session memoizes facts within each query and evaluates
+`first` candidates lazily. `initial_observation()` optionally returns the
+observed `Pose` associated with that capture. Configure ongoing readback through
+`NavigationOptions::observation(context)` and `object_observation(context)`;
+an unavailable observation is unknown, not a failed write.
+
+Supply an independent object adapter through `NavigationOptions::object_adapter`.
+Object facts use that adapter; the camera adapter handles other facts. For object
+poses keep both projection fields zero; cameras set exactly one of `fov` or
+`ortho_extent`. Rotations are rotation vectors in radians.
+
+Supply `NavigationOptions::scheduler` and the same native scheduler to
+`OpenAxisClientOptions::scheduler`. Implement `Scheduler::post` / `post_at` using deferred,
+thread-safe native dispatch; use the session's monotonic clock for deadlines.
+Call `native_camera_changed()` / `native_object_changed()` after native input,
+and `context_changed()` / `check_context()` when bindings may have changed.
+`context_changed()` retires the current gesture immediately; `check_context()`
+asks the adapters whether their captured contexts remain valid.
+`max_queries` defaults to 32, `max_work` to 64, and `drain_budget` to 32.
+Camera and object poses have reserved coalescing slots outside the general work
+limit. A query rejected at capacity receives `unavailable`; it does not cancel
+an otherwise valid gesture.
+Drains and acknowledgement deadlines run automatically.
+`cancel(reason)` retires the gesture and clears pivots; `viewport_settled()` reports
+a settled viewport. `close()` invalidates scheduled work and clears navigation
+while native resources exist. Destruction calls `close()`; adapters and their
+native resources must still be usable. A scheduler is required and must outlive its
+client/session. A host with an update loop can implement `Scheduler` by queuing
+callbacks and draining due work on that thread, including while unfocused.
+
+The explicit `NavigationSession(adapter, sender)` constructor is available for
+standalone coordinator tests. Its sender accepts `const Value&` and returns send
+success; the test owns message delivery and connection transitions.
+`NavigationOptions` also provides comparison callbacks, a monotonic clock,
+correction timeout and bounded work/drain budgets. Unknown readback is supported;
+host writes remain synchronous. Diagnostic and optional pivot-renderer exceptions
+are isolated.
+
+`OpenAxisClientOptions::max_queue` defaults to 256 inbound entries. The client coalesces
+adjacent poses for the same stream and rejects stale connection/gesture work;
+these are different limits from the other coordinators' work budgets.

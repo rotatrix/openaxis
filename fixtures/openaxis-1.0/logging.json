@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "level": "INFO",
+      "message": "hello",
+      "normalized": "info",
+      "line": "2026-09-19 10:25:30.123 -04:00 INFO hello\n"
+    },
+    {
+      "level": "warn",
+      "message": "watch",
+      "normalized": "warning",
+      "line": "2026-09-19 10:25:30.123 -04:00 WARNING watch\n"
+    },
+    {
+      "level": "CRITICAL",
+      "message": "bad",
+      "normalized": "error",
+      "line": "2026-09-19 10:25:30.123 -04:00 ERROR bad\n"
+    },
+    {
+      "level": "Debug",
+      "message": "detail",
+      "normalized": "debug",
+      "line": "2026-09-19 10:25:30.123 -04:00 DEBUG detail\n"
+    },
+    {
+      "level": "unknown",
+      "message": "fallback",
+      "normalized": "info",
+      "line": "2026-09-19 10:25:30.123 -04:00 INFO fallback\n"
+    },
+    {
+      "level": "info",
+      "message": "first\r\nsecond\rthird",
+      "normalized": "info",
+      "line": "2026-09-19 10:25:30.123 -04:00 INFO first\n    second\n    third\n"
+    },
+    {
+      "level": "info",
+      "message": "caf\u00e9 \ud83c\udf0d",
+      "normalized": "info",
+      "line": "2026-09-19 10:25:30.123 -04:00 INFO caf\u00e9 \ud83c\udf0d\n"
+    },
+    {
+      "level": "info",
+      "message": "\u001b[31mcolored\u001b[0m",
+      "normalized": "info",
+      "line": "2026-09-19 10:25:30.123 -04:00 INFO colored\n"
+    }
+  ],
+  "valid_clients": [
+    "fusion",
+    "my-app_2",
+    "a",
+    "123"
+  ],
+  "invalid_clients": [
+    "",
+    "UPPER",
+    "../escape",
+    "a/b",
+    "a b",
+    "a\n"
+  ],
+  "defaults": {
+    "max_bytes": 5242880,
+    "keep": 10
+  },
+  "debug_off": [
+    "info",
+    "warning",
+    "error"
+  ],
+  "configuration": [
+    "alpha",
+    "beta",
+    "alpha"
+  ],
+  "retained_suffixes": [
+    12,
+    11,
+    10,
+    9,
+    8,
+    7,
+    6,
+    5,
+    4
+  ],
+  "epoch_ms": 1789827930123,
+  "stamp": "2026-09-19 10:25:30.123 -04:00",
+  "rotation": {
+    "message": "hello",
+    "max_bytes": 84,
+    "writes_before_rotation": 2
+  },
+  "offset_minutes": -240
+}

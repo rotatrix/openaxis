@@ -1,0 +1,113 @@
+---
+title: 2D navigation
+description: Integrate fixed-orientation pan and zoom into a drawing, diagram, or canvas viewport.
+---
+
+import { Code } from '@astrojs/starlight/components';
+import source from '../../../../../examples/demos/lib/viewspace-2d.ts?raw';
+
+Use `viewspace.2d` for a drawing, diagram, image, or canvas whose camera can pan
+and zoom but cannot rotate. OpenAxis computes the navigation; your application
+provides a camera snapshot and applies the resulting pose.
+
+## Try the canvas demo
+
+Open [2D View Navigation](/demos/viewspace-2d.html). It displays a workflow
+diagram using Canvas 2D. Left-drag to pan, use the wheel to zoom around the
+cursor, and press **R** to reset. Fractional high-resolution wheel input is preserved.
+
+With Rotatrix running, the demo selects the user's shared navigation profile through its navigation capability.
+Hold **Win+Shift** on Windows, **Ctrl+Shift** on macOS, **Super+Shift** on Linux,
+or **btn4** to activate pan and zoom with the default mappings. The Rotatrix OSD shows the active mappings.
+The viewport stays flat: it never tilts or rolls.
+
+From the OpenAxis checkout, run:
+
+```sh
+pnpm install
+pnpm -C ts/sdk build
+pnpm -C examples/demos dev
+```
+
+Visit `http://localhost:5188/demos/viewspace-2d.html`.
+The implementation is `examples/demos/lib/viewspace-2d.ts`; its entry page is
+`examples/demos/viewspace-2d.html`. This focused example uses TypeScript; Python,
+C# and C++ integrations use the same camera facts and wire contract. C++ maps
+them through `NavigationAdapter` and native scheduler dispatch.
+
+## Describe a 2D viewport
+
+Publish these tags through the connection lifecycle metadata:
+
+```ts
+metadata: () => ({
+  tags: ['demo-3d-services', 'viewspace.2d'],
+  capabilities: ['navigation'],
+})
+```
+
+`demo-3d-services` identifies the demo; Rotatrix selects the user's navigation
+profile from its capabilities and context. Device instructions describe Rotatrix's
+customizable default mappings, not SDK or demo bindings. `viewspace.2d` describes the
+application's actual viewport restriction, not its workspace name. The current
+server's 2D pan/zoom path uses orbit navigation, so this demo does not publish
+the free-camera preference tag.
+
+An orthographic 3D view that can still orbit should use `viewspace.3d`.
+When switching between genuinely 2D and 3D viewports, invalidate the old context
+and refresh the complete metadata snapshot. See
+[Application context and focus](/guide/dynamic-tags/).
+
+## Supply camera and viewport facts
+
+Return `ortho_extent`, the visible vertical span in drawing units, and
+`viewport.aspect`, the viewport width divided by its height. Do not return `fov`.
+
+The demo uses world X right, Y up, and a camera looking along negative Z, with
+rotation vector `[0, 0, 0]`. Other fixed orientations are supported: the camera
+orientation defines the view plane. No `sketch.plane`, geometry picking, or
+physical drawing-plane depth is required.
+
+Optionally return `viewport.cursor` in normalized coordinates: X from −1 at the
+left to +1 at the right, Y from −1 at the bottom to +1 at the top. Return
+`UNAVAILABLE` outside the viewport. The server anchors zoom at the supplied
+cursor, falling back to the viewport center.
+
+Capture pose, aspect, and cursor together so a query sees a consistent snapshot.
+This adapter comes directly from the runnable demo:
+
+<Code lang="ts" code={source.split('// #region adapter')[1].split('// #endregion adapter')[0].trim()} />
+
+## Map the pose to a canvas
+
+For viewport height `height`, the drawing scale is:
+
+```ts
+const pixelsPerUnit = height / camera.ortho_extent;
+const screenX = width / 2 + (worldX - camera.t[0]) * pixelsPerUnit;
+const screenY = height / 2 - (worldY - camera.t[1]) * pixelsPerUnit;
+```
+
+The minus sign converts world Y up to canvas Y down. Use CSS pixels for viewport
+and pointer calculations, then scale the backing canvas by `devicePixelRatio`
+for sharp rendering. Do not mix backing-buffer pixels into the aspect or cursor.
+
+The demo limits the vertical span to 2–80000 drawing units and reports the
+**realized pose** after that clamp. The SDK can reconcile it with the server
+and reverse smoothly at a limit. Preserve the camera depth supplied by OpenAxis;
+for this orthographic renderer it does not change the drawing scale.
+
+## Keep native input and lifecycle in sync
+
+Mouse pan, wheel zoom, and reset modify the same camera state used by the adapter,
+then call `session.nativeCameraChanged()`. They participate in SDK reconciliation
+instead of racing a separate camera.
+
+On resize, invalidate the current context and clear the cached cursor because
+the projection changed. On blur, cancel dragging and invalidate navigation.
+The shared `FocusManager` wraps `OpenAxisConnectionManager` to publish focus,
+reconnect, and handle page suspension. On final shutdown, stop that lifecycle
+before closing and draining the Navigation session.
+
+See [Concurrent input](/guide/concurrent-input/) and
+[Connection shutdown](/guide/connection-shutdown/) for the full patterns.

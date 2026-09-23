@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- net48 supports the legacy CAD hosts; netstandard2.0 supports modern hosts. -->
+    <TargetFrameworks>net48;netstandard2.0</TargetFrameworks>
+    <RootNamespace>OpenAxis</RootNamespace>
+    <AssemblyName>OpenAxis</AssemblyName>
+    <Version>1.0.0-rc.1</Version>
+    <PackageId>OpenAxis</PackageId>
+    <Authors>Icebound Flame LLC</Authors>
+    <Description>OpenAxis 1.0 protocol, client, geometry, and diagnostics SDK.</Description>
+    <PackageLicenseExpression>Elastic-2.0 OR GPL-3.0-only</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MessagePack" Version="2.5.302" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\..\LEGAL.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

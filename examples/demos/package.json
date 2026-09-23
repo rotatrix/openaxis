@@ -1,0 +1,22 @@
+{
+  "name": "openaxis-demos",
+  "version": "0.1.0",
+  "description": "OpenAxis web demo suite — run with: pnpm install && pnpm dev",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@10.28.1",
+  "scripts": {
+    "test": "pnpm -C ../../ts/sdk build && node --test *.test.mjs && pnpm -C ../typescript_demo_3d_app check && pnpm -C ../typescript_demo_3d_app test",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.3.2"
+  },
+  "dependencies": {
+    "@sparkjsdev/spark": "2.1.0",
+    "fflate": "0.8.2",
+    "three": "^0.180.0"
+  }
+}

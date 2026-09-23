@@ -1,0 +1,27 @@
+{
+  "name": "openaxis",
+  "version": "1.0.0-rc.1",
+  "private": true,
+  "description": "OpenAxis protocol implementation",
+  "scripts": {
+    "build": "node scripts/tasks.mjs build",
+    "build:site": "pnpm -C docs build && pnpm -C examples/demos build && node scripts/build-site.mjs && node scripts/check-site.mjs",
+    "dev:docs": "pnpm -C docs dev",
+    "build:docs": "pnpm -C docs build",
+    "preview:docs": "pnpm -C docs preview",
+    "dev": "pnpm -r dev",
+    "lint": "pnpm -r lint",
+    "test": "node scripts/tasks.mjs test",
+    "demo": "node scripts/demo.mjs"
+  },
+  "keywords": [],
+  "author": "Icebound Flame LLC <david@rotatrix.com>",
+  "license": "Elastic-2.0 OR GPL-3.0-only",
+  "packageManager": "pnpm@10.28.1",
+  "devDependencies": {
+    "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

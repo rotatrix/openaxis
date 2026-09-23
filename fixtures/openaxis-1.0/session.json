@@ -1,0 +1,1814 @@
+{
+  "version": 1,
+  "description": "Private camera-session behavior, not a new wire protocol. Pose numbers are perspective camera X positions (fov=1); null actual means unavailable. Expected fields assert effects and state.",
+  "scenarios": [
+    {
+      "name": "host constraint residual waits for acknowledgement and permits movement away from limit",
+      "events": [
+        {"op":"connection","expect":{}},
+        {"op":"start","gesture":7,"expect":{}},
+        {"op":"query","actual":0,"expect":{}},
+        {"op":"receive","seq":1,"pose":12,"expect":{}},
+        {"op":"process","actual":0,"expect":{"kind":"apply"}},
+        {"op":"complete","actual":10,"expect":{"kind":"delta","t":[-2,0,0],"pending":0,"baseline":10}},
+        {"op":"receive","seq":2,"pose":13,"expect":{}},
+        {"op":"process","actual":10,"expect":{"kind":"hold","pending":0}},
+        {"op":"receive","seq":3,"pose":10,"ack":0,"expect":{}},
+        {"op":"process","actual":10,"expect":{"kind":"skip","pending":null}},
+        {"op":"receive","seq":4,"pose":9,"ack":0,"expect":{}},
+        {"op":"process","actual":10,"expect":{"kind":"apply"}},
+        {"op":"complete","actual":9,"expect":{"kind":"skip","baseline":9,"pending":null}}
+      ]
+    },
+    {
+      "name": "idle poses skip writes without bypassing observations or acknowledgement barriers",
+      "events": [
+        {"op":"connection","expect":{}},
+        {"op":"start","gesture":7,"expect":{}},
+        {"op":"query","actual":10,"expect":{}},
+        {"op":"receive","seq":1,"pose":10,"expect":{}},
+        {"op":"process","actual":10,"expect":{"kind":"skip"}},
+        {"op":"process","actual":10,"expect":{"kind":"reject"}},
+        {"op":"receive","seq":2,"pose":10,"expect":{}},
+        {"op":"process","actual":10,"expect":{"kind":"skip"}},
+        {"op":"receive","seq":3,"pose":10,"expect":{}},
+        {"op":"process","actual":12,"expect":{"kind":"delta","pending":0}},
+        {"op":"receive","seq":4,"pose":12,"expect":{}},
+        {"op":"process","actual":12,"expect":{"kind":"hold","pending":0}},
+        {"op":"receive","seq":5,"pose":12,"ack":0,"expect":{}},
+        {"op":"process","actual":12,"expect":{"kind":"skip","pending":null}},
+        {"op":"receive","seq":6,"pose":12,"ack":0,"expect":{}},
+        {"op":"process","actual":12,"expect":{"kind":"skip"}},
+        {"op":"receive","seq":7,"pose":12,"expect":{}},
+        {"op":"process","actual":null,"expect":{"kind":"skip"}},
+        {"op":"receive","seq":8,"pose":13,"expect":{}},
+        {"op":"process","actual":12,"expect":{"kind":"apply"}},
+        {"op":"complete","actual":13,"expect":{}}
+      ]
+    },
+    {
+      "name": "matching rebase pose is not acknowledgement; latest barrier wins",
+      "events": [
+        {"op":"connection","expect":{}},
+        {"op":"start","gesture":7,"expect":{}},
+        {"op":"query","actual":10,"expect":{}},
+        {"op":"observe","actual":11,"expect":{"kind":"delta","pending":0}},
+        {"op":"observe","actual":{"x":12,"extent":20},"expect":{"kind":"rebase","pending":1}},
+        {"op":"receive","seq":1,"pose":{"x":12,"extent":20},"ack":0,"expect":{}},
+        {"op":"process","actual":{"x":12,"extent":20},"expect":{"kind":"hold","pending":1}},
+        {"op":"query","actual":{"x":15,"extent":20},"expect":{"baseline":12,"pending":1}},
+        {"op":"observe","actual":{"x":13,"fov":0.8},"expect":{"kind":"rebase","pending":2}},
+        {"op":"receive","seq":2,"pose":{"x":12,"extent":20},"ack":1,"expect":{}},
+        {"op":"process","actual":{"x":13,"fov":0.8},"expect":{"kind":"hold","pending":2}},
+        {"op":"send_failed","delta":1,"expect":{"kind":"reject","active":7}},
+        {"op":"receive","seq":3,"pose":{"x":13,"fov":0.8},"ack":2,"expect":{}},
+        {"op":"process","actual":{"x":13,"fov":0.8},"expect":{"kind":"skip","pending":null}},
+        {"op":"process","actual":{"x":13,"fov":0.8},"expect":{"kind":"reject"}}
+      ]
+    },
+    {
+      "name": "native motion during rebase becomes a subsequent delta",
+      "events": [
+        {"op":"connection","expect":{}},
+        {"op":"start","gesture":7,"expect":{}},
+        {"op":"query","actual":10,"expect":{}},
+        {"op":"observe","actual":{"x":10,"extent":20},"expect":{"kind":"rebase","pending":0}},
+        {"op":"receive","seq":1,"pose":{"x":10,"extent":20},"ack":0,"expect":{}},
+        {"op":"process","actual":{"x":12,"extent":20},"expect":{"kind":"delta","pending":1,"t":[2,0,0]}},
+        {"op":"receive","seq":2,"pose":{"x":12,"extent":20},"ack":1,"expect":{}},
+        {"op":"process","actual":{"x":12,"extent":20},"expect":{"kind":"skip","pending":null}}
+      ]
+    },
+    {
+      "name": "postwrite projection change rebases; missing read keeps barrier; timeout cancels",
+      "events": [
+        {"op":"connection","expect":{}},
+        {"op":"start","gesture":7,"expect":{}},
+        {"op":"query","actual":10,"expect":{}},
+        {"op":"receive","seq":1,"pose":11,"expect":{}},
+        {"op":"process","actual":10,"expect":{"kind":"apply"}},
+        {"op":"complete","actual":{"x":11,"extent":20},"expect":{"kind":"rebase","applied":1,"pending":0}},
+        {"op":"receive","seq":2,"pose":{"x":11,"extent":20},"expect":{}},
+        {"op":"process","actual":null,"expect":{"kind":"hold","pending":0}},
+        {"op":"timeout","delta":0,"now":2,"expect":{"kind":"cancel","active":null}}
+      ]
+    },
+    {
+      "name": "native motion coalesces; queries preserve baseline; ack consumed once",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 0,
+            "t": [
+              2,
+              0,
+              0
+            ],
+            "pending": 0,
+            "baseline": 12
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 15,
+          "expect": {
+            "kind": "hold",
+            "baseline": 12
+          }
+        },
+        {
+          "op": "query",
+          "actual": 15,
+          "expect": {
+            "baseline": 12
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 15,
+          "expect": {
+            "kind": "hold",
+            "pending": 0
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 2,
+          "pose": 12,
+          "ack": 0,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 15,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 1,
+            "t": [
+              3,
+              0,
+              0
+            ],
+            "baseline": 15
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 3,
+          "pose": 15,
+          "ack": 1,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 15,
+          "expect": {
+            "kind": "skip",
+            "pending": null
+          }
+        },
+        {
+          "op": "process",
+          "actual": 15,
+          "expect": {
+            "kind": "reject",
+            "pending": null
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 4,
+          "pose": 16,
+          "ack": 1,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 15,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 16,
+          "expect": {
+            "kind": "skip",
+            "baseline": 16,
+            "applied": 4
+          }
+        }
+      ]
+    },
+    {
+      "name": "failed read without write preserves accumulated movement",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": null,
+          "expect": {
+            "kind": "skip",
+            "baseline": 10
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "expect": {
+            "kind": "delta",
+            "t": [
+              2,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "failed readback recovers residual from the requested pose",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 20,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": null,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": null,
+          "expect": {
+            "kind": "skip",
+            "baseline": null
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 21,
+          "expect": {
+            "kind": "delta",
+            "baseline": 21,
+            "pending": 0,
+            "t": [1, 0, 0]
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 22,
+          "expect": {
+            "kind": "hold",
+            "baseline": 21,
+            "pending": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "successful same-frame readback recovers immediately",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 20,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": null,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 20,
+          "expect": {
+            "kind": "skip",
+            "baseline": 20
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 21,
+          "expect": {
+            "kind": "delta",
+            "t": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown initial observation retries in same gesture",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": null,
+          "expect": {
+            "ready": true,
+            "baseline": null
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 10,
+          "expect": {
+            "kind": "skip",
+            "baseline": 10
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 11,
+          "expect": {
+            "kind": "delta",
+            "t": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "failed read preserves pending barrier and follow-up",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "expect": {
+            "kind": "delta",
+            "pending": 0
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": null,
+          "expect": {
+            "kind": "hold",
+            "pending": 0,
+            "baseline": 12
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 2,
+          "pose": 12,
+          "ack": 0,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 15,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 1,
+            "t": [
+              3,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ack during unavailable read permits write; persistent ack is not repeated",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "expect": {
+            "kind": "delta"
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 12,
+          "expect": {
+            "kind": "accepted"
+          },
+          "ack": 0
+        },
+        {
+          "op": "process",
+          "actual": null,
+          "expect": {
+            "kind": "skip",
+            "pending": null
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 2,
+          "pose": 13,
+          "ack": 0,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": null,
+          "expect": {
+            "kind": "apply"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unscoped and unavailable queries cannot authorize output",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "scoped": false,
+          "expect": {
+            "kind": "reject",
+            "ready": false,
+            "baseline": null
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 20,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "supplied": false,
+          "expect": {
+            "kind": "reject",
+            "ready": false
+          }
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "kind": "ok",
+            "ready": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "sequence watermarks and delta IDs span gestures",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 11,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 0
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 10,
+          "pose": 11,
+          "ack": 0,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 11,
+          "expect": {
+            "kind": "skip"
+          }
+        },
+        {
+          "op": "start",
+          "gesture": 8,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 11,
+          "expect": {}
+        },
+        {
+          "op": "receive",
+          "seq": 9,
+          "pose": 12,
+          "expect": {
+            "kind": "reject",
+            "received": 10
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 11,
+          "pose": 12,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 11,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 12,
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": 13,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "newer received pose supersedes pending work",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "as": "old",
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 2,
+          "pose": 12,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "ticket": "old",
+          "actual": 10,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 12,
+          "expect": {}
+        },
+        {
+          "op": "process",
+          "actual": 12,
+          "expect": {
+            "kind": "reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "replacement rejects queued work and late queries",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "as": "old",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 8,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "token": "a",
+          "actual": 10,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "process",
+          "ticket": "old",
+          "actual": 10,
+          "expect": {
+            "kind": "reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "old connection callbacks cannot match reused gesture IDs",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "as": "old",
+          "expect": {}
+        },
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 20,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "token": "a",
+          "actual": 10,
+          "expect": {
+            "kind": "reject",
+            "baseline": 20
+          }
+        },
+        {
+          "op": "receive",
+          "epoch": 1,
+          "seq": 2,
+          "pose": 12,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "process",
+          "ticket": "old",
+          "actual": 20,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 21,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "authorized write serializes replacement; stale completion cannot seed it",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "start",
+          "gesture": 8,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 20,
+          "expect": {
+            "kind": "reject",
+            "ready": false
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 11,
+          "expect": {
+            "kind": "reject",
+            "baseline": null
+          }
+        },
+        {
+          "op": "query",
+          "actual": 11,
+          "expect": {
+            "kind": "ok",
+            "baseline": 11
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 99,
+          "expect": {
+            "kind": "reject",
+            "baseline": 11
+          }
+        }
+      ]
+    },
+    {
+      "name": "matching end flushes final pose",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {}
+        },
+        {
+          "op": "end",
+          "expect": {}
+        },
+        {
+          "op": "receive",
+          "seq": 2,
+          "pose": 12,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 11,
+          "expect": {
+            "kind": "skip",
+            "baseline": 11
+          }
+        },
+        {
+          "op": "finish",
+          "expect": {
+            "active": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "final pose preserves newer native motion",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {}
+        },
+        {
+          "op": "end",
+          "expect": {}
+        },
+        {
+          "op": "process",
+          "actual": 12,
+          "expect": {
+            "kind": "hold",
+            "pending": null
+          }
+        },
+        {
+          "op": "finish",
+          "expect": {
+            "active": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "final pose preserves unacknowledged correction",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "expect": {}
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {}
+        },
+        {
+          "op": "end",
+          "expect": {}
+        },
+        {
+          "op": "process",
+          "actual": 12,
+          "expect": {
+            "kind": "hold",
+            "pending": 0
+          }
+        },
+        {
+          "op": "finish",
+          "expect": {
+            "pending": null,
+            "active": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel rejects old final output and preserves reason for wire message",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 11,
+          "expect": {}
+        },
+        {
+          "op": "cancel",
+          "reason": "context_changed",
+          "expect": {
+            "kind": "cancel",
+            "gesture_id": 7,
+            "reason": "context_changed",
+            "active": null
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "reject"
+          }
+        },
+        {
+          "op": "end",
+          "token": "a",
+          "expect": {
+            "kind": "reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "deadline needs no incoming pose and ignores stale callbacks",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "now": 2,
+          "expect": {
+            "kind": "delta",
+            "pending": 0
+          }
+        },
+        {
+          "op": "timeout",
+          "delta": 0,
+          "now": 2.5,
+          "expect": {
+            "kind": "reject",
+            "active": 7
+          }
+        },
+        {
+          "op": "timeout",
+          "delta": 0,
+          "now": 3,
+          "expect": {
+            "kind": "cancel",
+            "reason": "camera_delta_timeout",
+            "active": null
+          }
+        },
+        {
+          "op": "start",
+          "gesture": 8,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 20,
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": 21,
+          "now": 4,
+          "expect": {
+            "delta_id": 1
+          }
+        },
+        {
+          "op": "timeout",
+          "token": "a",
+          "delta": 0,
+          "now": 9,
+          "expect": {
+            "kind": "reject",
+            "pending": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "send failures affect only their originating pending delta",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": 12,
+          "expect": {}
+        },
+        {
+          "op": "send_failed",
+          "delta": 1,
+          "expect": {
+            "kind": "reject",
+            "pending": 0
+          }
+        },
+        {
+          "op": "send_failed",
+          "delta": 0,
+          "expect": {
+            "kind": "cancel",
+            "reason": "camera_delta_send_failed"
+          }
+        },
+        {
+          "op": "start",
+          "gesture": 8,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 20,
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": 21,
+          "expect": {}
+        },
+        {
+          "op": "send_failed",
+          "token": "a",
+          "delta": 0,
+          "expect": {
+            "kind": "reject",
+            "pending": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "constrained readback produces one correction from requested pose",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 20,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": 18,
+          "expect": {
+            "kind": "delta",
+            "t": [
+              -2,
+              0,
+              0
+            ],
+            "baseline": 18
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 2,
+          "pose": 18,
+          "ack": 0,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 18,
+          "expect": {
+            "kind": "skip",
+            "pending": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "write failure cancels; read failure does not",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "receive",
+          "seq": 1,
+          "pose": 20,
+          "expect": {
+            "kind": "accepted"
+          }
+        },
+        {
+          "op": "process",
+          "actual": 10,
+          "expect": {
+            "kind": "apply"
+          }
+        },
+        {
+          "op": "complete",
+          "actual": null,
+          "success": false,
+          "expect": {
+            "kind": "cancel",
+            "reason": "camera_write_failed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "projection discontinuity starts an identified rebase barrier",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": {
+            "x": 10,
+            "extent": 20
+          },
+          "expect": {
+            "kind": "rebase",
+            "pending": 0,
+            "active": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "orthographic zoom and translation remain independent",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": {
+            "x": 10,
+            "extent": 20
+          },
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": {
+            "x": 12,
+            "extent": 10
+          },
+          "expect": {
+            "kind": "delta",
+            "t": [
+              2,
+              0,
+              0
+            ],
+            "scale": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "rotations compose in world space without rotating position",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": {
+            "t": [
+              10,
+              20,
+              30
+            ],
+            "r": [
+              1.5707963267948966,
+              0,
+              0
+            ]
+          },
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": {
+            "t": [
+              10,
+              20,
+              30
+            ],
+            "r": [
+              0,
+              1.5707963267948966,
+              0
+            ]
+          },
+          "expect": {
+            "kind": "delta",
+            "t": [
+              0,
+              0,
+              0
+            ],
+            "r": [
+              -1.2091995761561452,
+              1.2091995761561452,
+              1.2091995761561452
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "equivalent full rotation does not create a correction",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "as": "a",
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {
+            "baseline": 10,
+            "ready": true
+          }
+        },
+        {
+          "op": "observe",
+          "actual": {
+            "x": 10,
+            "r": [
+              0,
+              0,
+              6.283185307179586
+            ]
+          },
+          "expect": {
+            "kind": "skip",
+            "pending": null
+          }
+        }
+      ]
+    }
+    ,{
+      "name": "unknown readback matching request establishes actual baseline",
+      "events": [
+        {"op": "connection", "expect": {}},
+        {"op": "start", "gesture": 7, "expect": {}},
+        {"op": "query", "actual": 10, "expect": {}},
+        {"op": "receive", "seq": 1, "pose": 20, "expect": {"kind": "accepted"}},
+        {"op": "process", "actual": 10, "expect": {"kind": "apply"}},
+        {"op": "complete", "actual": null, "expect": {"kind": "skip", "baseline": null}},
+        {"op": "observe", "actual": null, "expect": {"kind": "skip", "baseline": null}},
+        {"op": "observe", "actual": 20, "expect": {"kind": "skip", "baseline": 20, "pending": null}}
+      ]
+    },{
+      "name": "unknown writes replace command reference without inventing observation",
+      "events": [
+        {"op": "connection", "expect": {}},
+        {"op": "start", "gesture": 7, "expect": {}},
+        {"op": "query", "actual": 10, "expect": {}},
+        {"op": "receive", "seq": 1, "pose": 20, "expect": {}},
+        {"op": "process", "actual": 10, "expect": {"kind": "apply"}},
+        {"op": "complete", "actual": null, "expect": {"baseline": null}},
+        {"op": "receive", "seq": 2, "pose": 30, "expect": {}},
+        {"op": "process", "actual": null, "expect": {"kind": "apply", "baseline": null}},
+        {"op": "complete", "actual": null, "expect": {"baseline": null}},
+        {"op": "observe", "actual": 32, "expect": {"kind": "delta", "t": [2, 0, 0], "baseline": 32}},
+        {"op": "receive", "seq": 3, "pose": 32, "ack": 0, "expect": {}},
+        {"op": "process", "actual": 32, "expect": {"kind": "skip", "pending": null}}
+      ]
+    },{
+      "name": "unknown readback recovers projection through rebase",
+      "events": [
+        {"op": "connection", "expect": {}},
+        {"op": "start", "gesture": 7, "expect": {}},
+        {"op": "query", "actual": 10, "expect": {}},
+        {"op": "receive", "seq": 1, "pose": 20, "expect": {}},
+        {"op": "process", "actual": 10, "expect": {"kind": "apply"}},
+        {"op": "complete", "actual": null, "expect": {"baseline": null}},
+        {"op": "observe", "actual": {"x": 20, "extent": 10}, "expect": {"kind": "rebase", "pending": 0, "baseline": 20}}
+      ]
+    },{
+      "name": "supersession drops unknown command reference",
+      "events": [
+        {"op": "connection", "expect": {}},
+        {"op": "start", "gesture": 7, "expect": {}},
+        {"op": "query", "actual": 10, "expect": {}},
+        {"op": "receive", "seq": 1, "pose": 20, "expect": {}},
+        {"op": "process", "actual": 10, "expect": {"kind": "apply"}},
+        {"op": "complete", "actual": null, "expect": {"baseline": null}},
+        {"op": "start", "gesture": 8, "expect": {}},
+        {"op": "query", "actual": null, "expect": {}},
+        {"op": "observe", "actual": 50, "expect": {"kind": "skip", "baseline": 50, "pending": null}}
+      ]
+    },{
+      "name": "unchanged output uses known baseline but never unknown request",
+      "events": [
+        {"op": "connection", "expect": {}},
+        {"op": "start", "gesture": 7, "expect": {}},
+        {"op": "query", "actual": 10, "expect": {}},
+        {"op": "receive", "seq": 1, "pose": 10, "expect": {}},
+        {"op": "process", "actual": null, "expect": {"kind": "skip", "baseline": 10}},
+        {"op": "receive", "seq": 2, "pose": 20, "expect": {}},
+        {"op": "process", "actual": null, "expect": {"kind": "apply"}},
+        {"op": "complete", "actual": null, "expect": {"baseline": null}},
+        {"op": "receive", "seq": 3, "pose": 20, "expect": {}},
+        {"op": "process", "actual": null, "expect": {"kind": "apply", "baseline": null}}
+      ]
+    },
+    {
+      "name": "old gesture watermark cannot acknowledge a new gesture correction",
+      "events": [
+        {
+          "op": "connection",
+          "expect": {}
+        },
+        {
+          "op": "start",
+          "gesture": 7,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 10,
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": 11,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 0
+          }
+        },
+        {
+          "op": "receive",
+          "pose": 11,
+          "seq": 1,
+          "ack": 0,
+          "expect": {}
+        },
+        {
+          "op": "process",
+          "actual": 11,
+          "expect": {
+            "pending": null
+          }
+        },
+        {
+          "op": "start",
+          "gesture": 8,
+          "expect": {}
+        },
+        {
+          "op": "query",
+          "actual": 20,
+          "expect": {}
+        },
+        {
+          "op": "observe",
+          "actual": 21,
+          "expect": {
+            "kind": "delta",
+            "delta_id": 1
+          }
+        },
+        {
+          "op": "receive",
+          "gesture": 7,
+          "pose": 99,
+          "seq": 99,
+          "ack": 99,
+          "expect": {
+            "kind": "reject",
+            "pending": 1,
+            "received": 1
+          }
+        },
+        {
+          "op": "receive",
+          "gesture": 8,
+          "pose": 20,
+          "seq": 2,
+          "expect": {}
+        },
+        {
+          "op": "process",
+          "actual": 21,
+          "expect": {
+            "pending": 1
+          }
+        },
+        {
+          "op": "receive",
+          "gesture": 8,
+          "pose": 21,
+          "seq": 3,
+          "ack": 1,
+          "expect": {}
+        },
+        {
+          "op": "process",
+          "actual": 21,
+          "expect": {
+            "pending": null
+          }
+        }
+      ]
+    }
+  ]
+}

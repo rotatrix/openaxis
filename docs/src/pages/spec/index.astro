@@ -1,0 +1,9 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { DOCS, renderDocFragment } from '../../../../scripts/render-docs.mjs';
+import source from '../../../../SPEC.md?raw';
+const { title, headings, body } = renderDocFragment(DOCS[0], source);
+---
+<StarlightPage frontmatter={{ title, description: 'The authoritative OpenAxis 1.0 wire protocol specification.' }} headings={headings} hasSidebar>
+  <div class="sl-markdown-content" set:html={body} />
+</StarlightPage>

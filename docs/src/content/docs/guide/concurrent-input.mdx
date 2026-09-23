@@ -1,0 +1,203 @@
+---
+title: Concurrent input and constraints
+description: Follow native camera changes, readback and delta corrections in the demo 3D applications.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import cppSource from '../../../../../examples/cpp_demo_3d_app/integration.hpp?raw';
+import SourceLink from '../../../components/SourceLink.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+A camera can move through mouse input or application constraints while Rotatrix
+is navigating. If Rotatrix continues from an outdated pose, its next update can
+undo that movement. `NavigationSession` uses camera observations and write readback
+to keep Rotatrix aligned with the application's actual state.
+
+The [demos](/guide/navigation-quickstart/) demonstrate this with simultaneous
+mouse and Rotatrix input. The same mechanism applies to object edits.
+
+## Try it
+
+With no object edit active, start a Rotatrix gesture and use middle/right-drag to
+orbit, Shift-drag to pan, or the wheel to zoom. Release the gesture while moving.
+Try perspective and orthographic views with **D** enabled. Movement should remain
+continuous, including the final pose after release.
+
+During an [object edit](/guide/object-manipulation/), mouse input changes
+the object instead. Its adapter uses the same observation/correction mechanism.
+
+## Change notifications
+
+An observation callback reads the application's current pose. A change notification
+tells `NavigationSession` when to read it, so native input can be incorporated even
+before the next server update. The integration registers these notifications at
+startup; the application emits them after its own input changes a pose.
+
+Adapter writes already report their result directly and do not emit a second
+native-input notification.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+After creating `session`, `MyOpenAxisIntegration.start()` assigns its notification
+methods to the application's event hooks. The application invokes these hooks
+after native input changes a pose:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('        app.on_camera_changed ='), integrationSource.indexOf('        self.connection = OpenAxisConnectionManager(')).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration.start" />
+
+The `observation=adapter.read` callback reads the latest camera pose when
+`NavigationSession` handles a change notification.
+
+</TabItem>
+<TabItem label="C#">
+
+The `MyOpenAxisIntegration` constructor uses the previously created camera and
+object adapters for observation, then registers notifications on `app`:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        app.CameraChanged ="), csharpSource.indexOf("        app.ContextChanged =")).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.MyOpenAxisIntegration" />
+
+After mouse input changes the camera or object, the application invokes
+`CameraChanged` or `ObjectChanged`. The integration hooks above deliver that
+notification to `NavigationSession`.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The constructor supplies camera and object observations. `start()` registers the host event callbacks below. Emit `camera` or `object` after native input changes a pose; adapter writes must not emit these events.
+
+<Code lang="typescript" code={'this.detach.push(\n' + typescriptSource.slice(typescriptSource.indexOf('      this.app.on("camera"'), typescriptSource.indexOf('      this.app.on("operation"')).replace(/^ {4}/gm, '').trimEnd() + '\n);'} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.start" />
+
+</TabItem>
+<TabItem label="C++">
+
+Supply a native `Scheduler` in `OpenAxisClientOptions` and `NavigationOptions`. After native input call `native_camera_changed()` or `native_object_changed()`; the SDK coalesces observations and schedules acknowledgement deadlines. Notify target replacement through `context_changed()`. SDK writes already return realized poses and must not emit native-input notifications. The reference app wires these methods to `MyApplication` callbacks; its GLFW scheduler drains deferred work on the application thread.
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+The `NavigationSession` schedules an observation on the application thread. If the actual
+pose changed independently, it sends a correction and waits for acknowledgement
+before applying further output that depends on that correction.
+
+## Camera write results
+
+An application may constrain a requested pose, for example by limiting camera
+height. The adapter returns the resulting pose so `NavigationSession` can correct
+Rotatrix's state and continue from the constrained position.
+
+The `NavigationSession` calls **MyNavigationAdapter** on the application thread to apply a pose.
+The [complete adapter](/guide/navigation-quickstart/#adapter-implementation)
+shows how it captures the application and reads its camera.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+`context` is the captured `MyApplication`; `desired` is an SDK `CameraPose`.
+`MyCamera` is the application's camera value type from `application.py`.
+`self.read(context)` uses the adapter's existing read method to return an SDK pose:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('    def apply_camera('), integrationSource.indexOf('    def show_pivot(')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyNavigationAdapter.apply_camera" />
+
+</TabItem>
+<TabItem label="C#">
+
+The adapter retains `app` from its constructor. `desired` is a `CameraPoseValue`;
+`SetCamera` and `Camera` are native application API members:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("    public NavigationWriteResult ApplyCamera("), csharpSource.indexOf("    public void ShowPivot(")).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyNavigationAdapter.ApplyCamera" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The adapter receives `CameraPoseMessage` and returns `{ success, realizedPose }`. `writeCamera` applies native constraints; `readCamera` reads their actual result.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('  applyPose(context:'), typescriptSource.indexOf('  showPivot(context:')).replace(/^ {2}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyNavigationAdapter.applyPose" />
+
+</TabItem>
+<TabItem label="C++">
+
+`MyNavigationAdapter::apply_pose` returns `WriteResult` with success and the realized pose. `read_camera(context)` supplies ongoing observation through the session options. Return the host's actual constrained pose; unavailable readback remains unknown and does not cancel the gesture.
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('    std::optional<Pose> read_camera('), cppSource.indexOf('    void show_pivot(')).replace(/^ {4}/gm, '').trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+| Application result | Python | C# | TypeScript |
+| --- | --- | --- | --- |
+| Write succeeded; resulting pose known | WriteResult(True, actual) | new NavigationWriteResult(true, actual) | `{ success: true, realizedPose: actual }` |
+| Write succeeded; readback temporarily unavailable | WriteResult(True) | new NavigationWriteResult(true) | `{ success: true }` |
+| Write failed | WriteResult(False) | new NavigationWriteResult(false) | `{ success: false }` |
+
+Unknown readback is retried on later observation while navigation continues
+optimistically. The examples normally return immediate readback; SDK tests cover
+unknown-readback recovery and failures.
+
+## Comparison precision
+
+Repeated conversions can introduce rounding differences without moving the visible
+camera. Comparison tolerances prevent these differences from generating continuous
+corrections while preserving meaningful motion. Their values depend on the
+application's measured precision and camera representation.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+Panda3D stores float32 transforms. The integration accounts for their precision
+with `comparison` and `object_comparison` callbacks.
+
+These callables specialize the SDK's `compare` and `compare_object` functions
+using `functools.partial`. `MyOpenAxisIntegration.start()` passes them to the `NavigationSession`;
+the SDK invokes them when comparing observed and requested poses:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('compare_camera_pose ='), integrationSource.indexOf('class MyApplicationScheduler:')).trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" />
+
+</TabItem>
+<TabItem label="C#">
+
+The C# demo retains double-precision poses and uses the SDK defaults. Applications
+that quantize transforms can supply `comparison` and `objectComparison` callbacks
+with tolerances appropriate to their own representation.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+This example uses SDK comparison defaults. If the host quantizes transforms, supply `comparison: (a, b) => comparePoses(a, b, options)` and `objectComparison: (a, b) => compareObjectPoses(a, b, objectOptions)` when constructing the `NavigationSession`. Import both functions from `@openaxis/sdk` and choose tolerances from measured host precision.
+
+</TabItem>
+<TabItem label="C++">
+
+The C++ defaults match the other SDKs: absolute translation tolerance `1e-7`, relative tolerance `1e-9`, and angular/projection tolerance `1e-7`. Supply `NavigationOptions::compare_camera` and `compare_object` for native precision or equivalence rules. Projection/FOV changes use a rebase.
+
+</TabItem>
+</Tabs>
+
+See [write and observation contracts](/reference/navigation-hosts/#writes-and-observations).
+
+## Verification
+
+Manually verify simultaneous native and Rotatrix input, gesture release, reset,
+projection changes, object editing and operation invalidation. Application-specific
+constraints need their own tests. The SDK owns [reconciliation and timeouts](/concepts/reconciliation/).
+
+For automated commands and coverage, use the demo READMEs: [Python](/examples/python_demo_3d_app/README.md), [C#](/examples/csharp_demo_3d_app/README.md), [TypeScript](/examples/typescript_demo_3d_app/README.md), and [C++](/examples/cpp_demo_3d_app/README.md).

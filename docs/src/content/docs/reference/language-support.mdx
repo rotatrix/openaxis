@@ -1,0 +1,200 @@
+---
+title: Compatibility and language support
+description: Current navigation-session capabilities and API differences across Python, C#, TypeScript, and C++.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Release status
+
+OpenAxis 1.0 is **Release Candidate 1**. The wire identifier is `openaxis/1.0`;
+package versions use each ecosystem's RC notation. This site documents the current
+repository implementation, which may be newer than a package published to a registry.
+Match examples and package source to the same revision while 1.0 is unreleased.
+
+## Rotatrix compatibility
+
+OpenAxis 1.0 and later require **Rotatrix 1.6.0 or newer**. For the current
+OpenAxis 1.x protocol, all four SDKs connect using `openaxis/1.0`.
+The minimum Rotatrix version does not establish support for future protocol
+majors; those need an explicitly compatible server release.
+
+SDK package versions identify the application-facing API, independently of
+Rotatrix and protocol versions. See [Versioning](#versioning) below. Compatibility
+with a host application such as a CAD tool also depends on its integration and
+runtime; consult that integration's supported application versions.
+
+<a id="implemented"></a>
+
+## Language support
+
+The SDKs target strict feature and behavioral parity. The table below records current support; missing capabilities are implementation gaps, not intended language limitations. Their execution
+models and API spelling follow their programming languages.
+
+| Capability | Python | C# | TypeScript | C++ |
+| --- | --- | --- | --- | --- |
+| WebSocket client and protocol types | Available | Available | Available | Available |
+| Connection supervision and metadata replay | `OpenAxisConnectionManager` | `OpenAxisConnectionManager` | `OpenAxisConnectionManager` | `OpenAxisConnectionManager` |
+| Synchronous native application session | Available | Available | Available | Available |
+| Camera and optional object streams | Available | Available | Available | Available |
+| Rigid object comparison | `compare_object` | Object comparison callback | `compareObjectPoses` | `compare_object_poses` / callback |
+| Awaitable application camera operations | `AsyncNavigationSession` | No dedicated async application session | `AsyncNavigationSession` | Not implemented |
+| Awaitable application object operations | Not implemented | Not implemented | Optional `objectAdapter` on `AsyncNavigationSession` | Not implemented |
+| Application scheduling | Required scheduler for synchronous session | Required scheduler | Default event-loop scheduler or supplied scheduler | Required native `Scheduler` |
+| Observation/correction diagnostics | Callback `(event, **values)` | `NavigationObserver` virtual methods | Typed `onEvent({ event, values })` or legacy `(event, values)` | `on_event(const NavigationEvent&)`; legacy `diagnostics` callback |
+| Three.js OrbitControls adapter | — | — | Available | — |
+| Shared diagnostic collector/presentation | `NavigationDiagnostics` | `NavigationDiagnostics` | `NavigationDiagnostics` | `NavigationDiagnostics` |
+| Diagnostic refresh deadline | `expires_at` | `ExpiresAt` | `expiresAt` | `expires_at` |
+| Pose value representation | `CameraPose` / `ObjectPose` dataclasses | Immutable geometry/navigation structs | Structural objects with `t`, `r`, projection fields | `Pose` value struct |
+| Completion of native writes | Synchronous, or awaited in async variant | Synchronous adapter callback | Synchronous, or awaited in async variant | Synchronous; optional realized pose |
+
+An asynchronous WebSocket transport does **not** imply asynchronous native application
+callbacks. For example, returning a Promise from TypeScript `applyPose` is not
+supported by its synchronous `NavigationSession` contract; use `AsyncNavigationSession`.
+
+## Public imports
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+```python
+from openaxis.navigation_session import NavigationSession, WriteResult, compare, compare_object
+from openaxis.async_navigation_session import AsyncNavigationSession
+```
+
+</TabItem>
+<TabItem label="C#">
+
+```csharp
+using OpenAxis.Navigation;
+using OpenAxis.Geometry;
+using OpenAxis.Client;
+```
+
+</TabItem>
+<TabItem label="TypeScript">
+
+```typescript
+import { NavigationSession, AsyncNavigationSession, NavigationDiagnostics, comparePoses, compareObjectPoses } from "@openaxis/sdk";
+import type { NavigationAdapter, NavigationObjectAdapter, WriteResult, ObjectWriteResult } from "@openaxis/sdk";
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+#include <openaxis/client.hpp>
+#include <openaxis/connection_manager.hpp>
+#include <openaxis/navigation.hpp>
+#include <openaxis/geometry.hpp>
+```
+
+Link the CMake target `OpenAxis::openaxis`. The public namespace is `openaxis`; extensible wire maps use `openaxis::Value` and native poses use `openaxis::Pose`.
+
+</TabItem>
+</Tabs>
+
+Python intentionally does not re-export everything at the package root. Its
+underscored implementation modules are not the integration import surface.
+TypeScript's package root exports navigation sessions; protocol and geometry
+also have separate package subpaths. C# integration assemblies need no friend
+assembly access to consume the `NavigationSession`.
+
+TypeScript's synchronous camera adapter receives `CameraPoseMessage`; its
+`NavigationObjectAdapter` receives `ObjectPoseMessage`. Object comparison ignores
+camera projection fields and uses translation and rotation tolerances.
+`NavigationSession.isActive` follows C#'s `IsActive`: false once a gesture ends
+or is cancelled, including while final queued cleanup is pending.
+
+<a id="current-boundaries"></a>
+
+## Implementation boundaries
+
+SDK conformance establishes shared state behavior, not native camera precision,
+picking quality, rendering performance or application compatibility. Use the
+[integration checklist](/guide/validation/) in the actual host.
+
+C++ native viewer validation currently covers Windows; cross-platform source
+does not establish macOS/Linux runtime coverage. Its synchronous coordinator
+supports shared session traces, unknown-readback recovery and custom comparisons.
+Awaitable host support is recorded in the table above.
+
+Asynchronous reads and writes cannot make concurrent native input atomic.
+Unknown-readback recovery cannot reconstruct an adjustment already overwritten
+while observations were unavailable. See [reconciliation](/concepts/reconciliation/).
+
+## Local connection security
+
+The RC endpoint does not authenticate clients, pair devices or allowlist browser
+origins. The native plaintext endpoint is restricted to loopback. Browser access
+prompts are not OpenAxis authentication. Read the specification's
+[security considerations](/spec/#12-security-and-privacy-considerations) before configuring
+browser access.
+
+## Identifier ranges
+
+All SDKs accept integer identifiers, sequence counters, and integer timestamps
+from 0 through 2^53 - 1 inclusive. The shared protocol fixtures check both the
+maximum and the first out-of-range value. Monotonic counters do not wrap within
+their scope; SDK request allocators fail on exhaustion instead of reusing IDs.
+
+Pose sequence numbers and delta ID allocators are connection-scoped. Applied-delta
+watermarks are target- and gesture-scoped: they reset on gesture replacement and
+appear only after that gesture's first identified delta. A watermark from an old
+gesture cannot acknowledge current work.
+
+## Other behavioral differences
+
+Vector components and projection values require finite numeric values in all
+four SDKs. Numeric strings and booleans are rejected. Projection values must
+also be positive.
+
+Observers expose navigation state, query outcomes and camera/object correction
+evidence for supported streams. Python sync and async sessions share camera-event
+payloads; the async session does not yet support objects. Callback shapes and
+field spelling remain language-specific; see the
+[event reference](/reference/diagnostic-events/).
+
+TypeScript and C++ allow multiple ordinary input listeners through `addListener`
+and `add_listener`. Python and C# expose one ordinary listener alongside the
+exclusive navigation-session listener. Applications combining multiple custom
+consumers need to dispatch within that listener in Python/C#.
+
+## Versioning
+
+Each SDK package follows [Semantic Versioning](https://semver.org/) independently
+of the other SDKs and the protocol specification. For stable packages, patch
+releases contain backward-compatible fixes, minor releases add compatible
+functionality or deprecate APIs, and major releases introduce incompatible changes.
+Prereleases use each package ecosystem's notation.
+
+The public compatibility promise includes API signatures, callback payloads,
+ownership, lifecycle delivery, error behavior and supported runtime requirements.
+A fix that breaks documented behavior requires a major release. Additive observer
+changes follow the [event extensibility contract](/reference/diagnostic-events/).
+
+A Python-only fix can increment the Python patch version without releasing the
+other SDKs. Shared features and behavior remain subject to the same parity and
+conformance requirements even when package versions differ. Release notes identify
+changes and any new runtime requirements for each affected package.
+
+All current SDKs use the `openaxis/1.0` wire identifier. Package major versions do
+not determine protocol support: an SDK 2.0 release can continue using that wire
+identifier. The specification defines
+[protocol revision and negotiation rules](/spec/#33-version-negotiation).
+Use capability declarations and `unsupported` RPC responses to determine optional
+feature availability.
+
+## Connection version metadata
+
+All SDK clients automatically send `sdk.name` and `sdk.version` in `hello`.
+The SDK names are `openaxis-python`, `openaxis-csharp`, `openaxis-typescript` and
+`openaxis-cpp`; the name identifies the implementation language and the version
+identifies its package release.
+Integrations should supply their own optional version through `client_version`
+(Python/C++), `clientVersion` (TypeScript), or the `clientVersion` constructor
+argument (C#). Supply the application version through `Target.app_version`
+(Python), `target.app_version` (TypeScript/C++), or `Target.AppVersion` (C#).
+On the wire these are always `client_version` and `target.app_version`.
+Versions are non-empty opaque diagnostic strings; omit unavailable values.
+They do not affect target matching, authentication, or capability negotiation.

@@ -1,0 +1,187 @@
+---
+title: Reloading during development
+description: Establish a fast edit, reload and test loop for an application integration.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+I strongly recommend adding a development reload path early when building an
+OpenAxis integration. Restarting a large CAD or 3D application for each camera
+adapter change slows down the native testing that integration work needs. A
+reload command lets you keep a useful scene open while testing changes to
+coordinate conversion, picking and viewport behavior.
+
+These are optional development recommendations. Choose a reload mechanism that
+fits your application's plugin system; OpenAxis supplies connection and session
+lifecycle APIs, while your integration owns code replacement and native resources.
+
+## Start with a manual reload
+
+Use the application's existing script or plugin reload facility where available.
+Otherwise, consider a small stable entry point that stops the current
+implementation and loads a replacement. A menu action or developer command is a
+good first step: it gives you control over when a gesture or native operation is
+interrupted. Add file watching only after this explicit reload path works reliably.
+
+Keep the edit loop short: edit the adapter, build or copy the changed files if
+needed, reload, then repeat the same navigation action in the same scene. Show
+the loaded build or source location in development logs so you can confirm that
+you are testing the intended code. See [diagnostics and logging](/guide/diagnostics-logging/)
+for inspecting navigation behavior.
+
+## Stop, replace and restart the integration
+
+A reload command coordinates three steps: shut down the current integration,
+load the edited code, then create and start a fresh integration. Keep the code
+that coordinates these steps outside the implementation it replaces, so it can
+report a failed load and let you retry.
+
+Reuse the integration's normal shutdown path. Stop new work, finish networking
+and retries, close the navigation session, and release native callbacks, timers
+and graphics while the host resources needed for cleanup still exist. Follow
+[connection recovery and shutdown](/guide/connection-shutdown/) for the
+language-specific API sequence.
+
+Keep the host scheduler available for cleanup that needs its thread. Avoid
+blocking that thread while waiting for work that itself needs the thread to
+finish. If a worker fails to stop within a timeout, retain its owner and abort
+reload; retry shutdown or restart the application before replacing code.
+
+Once shutdown succeeds, replace the code and construct a fresh integration that
+announces current capabilities, tags and focus. Normal server reconnection can
+reuse an existing client and session. Reloading code also requires replacing the
+objects and callbacks created by the old implementation.
+
+## Reload code in your language
+
+The host and runtime determine how code can be replaced. Use the approach for
+your language below, and identify which edits it can pick up without restarting
+the application.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+For an embedded Python host, maintain an explicit list of reloadable modules in
+dependency order: shared types and helpers, adapters, then the module that creates
+the integration. Call `importlib.reload()` on each, then construct a fresh
+integration. Reloading a package's `__init__.py` alone does not reload its submodules.
+
+The Rotatrix Blender integration uses this approach through Blender's Reload
+Scripts command; disconnect first so its modal cursor tracker can finish. The
+FreeCAD integration provides a toolbar action that stops its handler, reloads
+runtime modules and starts a fresh handler. Its workbench entry points and
+installed dependencies still have a separate update workflow.
+
+Prefer `import camera_adapter` and lookup through `camera_adapter.CameraAdapter`
+in the coordinator. A `from camera_adapter import CameraAdapter` binding keeps
+the old class until that import runs again. Existing instances also retain their
+old class. If you reload SDK types, reload their consumers too, including the
+connection manager; mixing old and new enum or class identities can break startup.
+
+Run reload on the host's permitted thread after stopping workers and unregistering
+native classes, timers and callbacks. Limit the module list to packages your
+integration owns. Purging entries from `sys.modules` neither stops existing
+objects nor isolates other plugins using those package names.
+
+Use `importlib.invalidate_caches()` when newly created modules need discovery;
+it does not update existing objects. Restart for native extension changes unless
+the extension explicitly supports reinitialization. Refresh vendored SDK files
+before reloading their modules. See Python's
+[reload caveats](https://docs.python.org/3/library/importlib.html#importlib.reload).
+
+</TabItem>
+<TabItem label="C#">
+
+If the host supplies assembly reload hooks, stop the integration in its
+before-reload hook and initialize it after reload. Otherwise, split the plugin
+into a stable loader, a small shared interface, and an implementation assembly
+containing the adapters and runtime state.
+
+On a runtime supporting collectible `AssemblyLoadContext`, load the implementation
+and its private dependencies into a new collectible context. Keep the contract
+and host API assemblies shared with the host context so interface casts use the
+same type identity. Loading from a byte stream can avoid locking the implementation
+file during rebuilds; deploy a completed build before requesting replacement.
+
+Await connection shutdown, dispose the session, unsubscribe events and timers,
+and release references to the implementation before requesting `Unload()`.
+Unloading is cooperative: a running thread, delegate or other external reference
+can keep the old context alive. Use a weak-reference unload check in development
+to detect leaks. See the .NET
+[assembly unloadability guide](https://learn.microsoft.com/en-us/dotnet/standard/assembly/unloadability).
+
+Treat changes to the stable contract or host-loaded dependencies as restart cases.
+On .NET Framework, byte-loading a replacement does not unload the previous
+assembly from its application domain; plan periodic process restarts if using
+that development technique. Do not assume a rebuild replaces already loaded SDK
+assemblies.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+Start with a full page refresh for browser integrations. It replaces the JavaScript
+runtime along with the adapter, which is often fast enough. Persist only useful
+development inputs, such as the selected test scene, rather than clients,
+sessions or callbacks from the previous run.
+
+If retaining the page matters, give one stable owner responsibility for mounting
+and stopping the integration. Its replacement operation should await the old
+integration's `stop()` before constructing and starting the new one. That stop
+path should remove DOM listeners, cancel animation frames and timers, stop the
+connection manager, and close/drain the session while the viewport still exists.
+
+Connect your bundler's hot-module-replacement hooks to that owner. For example,
+Vite exposes `import.meta.hot.dispose()` for cleanup and `import.meta.hot.accept()`
+for accepting an update. Explicitly serialize asynchronous teardown and startup
+in the owner; do not assume that returning a promise from a disposal callback
+delays all replacement code. See the [Vite HMR API](https://vite.dev/guide/api-hmr).
+
+Avoid starting a connection as an unowned module-import side effect. A module
+update can otherwise create another connection while old callbacks remain active.
+Use full refresh when SDK modules or the integration's shared interface change,
+or when the bundler cannot safely propagate the update. Browser page-exit handlers
+cannot reliably await networking cleanup; test the awaited stop path separately.
+
+</TabItem>
+<TabItem label="C++">
+
+Prefer the host's supported plugin unload/load command. Keep a stable loader only
+if the host permits unloading your implementation library. A useful design is a
+small versioned C-compatible boundary with explicit create, stop and destroy
+functions and an opaque instance handle. Keep STL objects, exceptions and
+ownership of allocated memory inside the implementation; destroy objects with
+the same implementation that created them.
+
+Before unloading, stop host callbacks, close the navigation session
+while its host is still available, call the SDK client's `stop()` to finish
+networking, then destroy the integration. Ensure no thread, queued callback,
+function pointer or object with a library-owned vtable can execute old code.
+Releasing a library handle is not a substitute for this teardown; on Windows,
+see the [FreeLibrary lifetime rules](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary).
+
+Build to a staging location, then load the completed replacement through the
+host's mechanism. A separate filename per build can avoid overwriting a loaded
+binary, but does not make old code safe to unload. Treat ABI changes, host-facing
+type registration and shared native dependency changes as restart cases unless
+the host explicitly supports replacing them.
+
+If the host cannot unload plugins safely, automate rebuilding and restarting with
+a small saved test scene. Keep the SDK and adapter's pure conversion logic covered
+by standalone tests so most iterations do not require launching the host.
+
+</TabItem>
+</Tabs>
+
+## Document and test the edit loop
+
+Write down the setup command, installed source or build location, reload action,
+and changes that require a full restart. Source links can make adapter edits
+immediately available on disk; vendored SDK copies and compiled dependencies
+still need their own refresh step.
+
+Exercise reload repeatedly, including during navigation, connection retry and
+pending native callbacks. Confirm that the old worker has stopped, only one
+connection remains, overlays disappear, and callbacks or timers do not accumulate.
+Also try a failed build or import and verify that the next successful reload can
+recover. These checks complement the [integration checklist](/guide/validation/)
+and must include testing inside the actual host application.

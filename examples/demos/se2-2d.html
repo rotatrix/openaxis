@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAxis — SE2 World-Frame 2D</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { overflow: hidden; background: #1a1a2e; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <script type="module">
+    import { OpenAxisClient, NavigationSession, UNAVAILABLE } from "../../ts/sdk/src/index.js";
+    import { manageFocus } from "./lib/focus-manager.js";
+    import { createStatusHUD } from "./lib/status-hud.js";
+
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+
+    function resize() {
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+    }
+    resize();
+    addEventListener("resize", resize);
+
+    const GRID = 8;
+    const objectPose = { t: [0, 0, 0], r: [0, 0, 0] };
+    let alive = true, stopping, animationFrame;
+    const updateHUD = createStatusHUD();
+    const client = new OpenAxisClient({ clientName: "demo-se2-2d" });
+    const cameraAdapter = {
+      captureContext: () => alive ? canvas : undefined,
+      isCurrent: context => alive && context === canvas,
+      beginQuery() {
+        return { resolve(name) {
+          switch (name) {
+            case "document.id": return "demo-se2-2d";
+            case "world.orientation": return { forward: [0, 0, -1], up: [0, 1, 0], handedness: "right" };
+            case "camera.pose": return { t: [0, 0, 10], r: [0, 0, 0], ortho_extent: (GRID + 2) * canvas.height / Math.min(canvas.width, canvas.height) };
+            case "viewport.aspect": return canvas.width / canvas.height;
+            case "camera.view_target": return [...objectPose.t];
+            default: return UNAVAILABLE;
+          }
+        } };
+      },
+      // The canvas view stays fixed; only the arrow moves.
+      applyPose: () => ({ success: false }),
+    };
+    const objectAdapter = {
+      captureContext: () => alive ? objectPose : undefined,
+      isCurrent: context => alive && context === objectPose,
+      beginQuery() {
+        const pose = structuredClone(objectPose);
+        return { resolve: name => name === "object.pose" ? pose : UNAVAILABLE };
+      },
+      applyPose(context, pose) {
+        objectPose.t = [Math.max(-GRID / 2, Math.min(GRID / 2, pose.t[0])), Math.max(-GRID / 2, Math.min(GRID / 2, pose.t[1])), 0];
+        objectPose.r = [0, 0, pose.r[2]];
+        // Report the clamp; the SDK sends and tracks the correction so that
+        // reversing at the grid edge responds without accumulated overshoot.
+        return { success: true, realizedPose: structuredClone(objectPose) };
+      },
+    };
+    const session = new NavigationSession(client, cameraAdapter, { objectAdapter });
+    const cancelGesture = () => session.contextChanged();
+    const fm = manageFocus(client, {
+      metadata: () => ({ tags: ["demo-se2"], capabilities: ["navigation"] }),
+      onState: updateHUD,
+      onPauseChange(paused) { updateHUD.setPaused(paused); if (paused) cancelGesture(); },
+    });
+    const onKey = e => { if (e.key === "Escape") fm.isPaused() ? fm.resume() : fm.pause(); };
+    const onClick = () => fm.resume();
+    const onPageHide = event => {
+      if (event.persisted) cancelGesture();
+      else void shutdown().catch(error => console.error("SE2 2D shutdown failed", error));
+    };
+    addEventListener("keydown", onKey); addEventListener("blur", cancelGesture);
+    addEventListener("pagehide", onPageHide);
+    canvas.addEventListener("click", onClick);
+    function shutdown() {
+      if (stopping) return stopping;
+      alive = false; cancelAnimationFrame(animationFrame);
+      removeEventListener("keydown", onKey); removeEventListener("blur", cancelGesture);
+      removeEventListener("pagehide", onPageHide); removeEventListener("resize", resize);
+      canvas.removeEventListener("click", onClick);
+      stopping = (async () => {
+        try { await fm.destroy(); }
+        finally { session.close(); session.drain(); }
+      })();
+      return stopping;
+    }
+
+    // --- Drawing ---
+    function draw() {
+      if (!alive) return;
+      animationFrame = requestAnimationFrame(draw);
+      const W = canvas.width;
+      const H = canvas.height;
+      const cx = W / 2;
+      const cy = H / 2;
+      const scale = Math.min(W, H) / (GRID + 2);
+
+      // Clear
+      ctx.fillStyle = "#1a1a2e";
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid
+      ctx.strokeStyle = "#333355";
+      ctx.lineWidth = 1;
+      for (let i = -GRID / 2; i <= GRID / 2; i++) {
+        const px = cx + i * scale;
+        const py = cy - i * scale;
+        ctx.beginPath();
+        ctx.moveTo(px, cy - (GRID / 2) * scale);
+        ctx.lineTo(px, cy + (GRID / 2) * scale);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - (GRID / 2) * scale, py);
+        ctx.lineTo(cx + (GRID / 2) * scale, py);
+        ctx.stroke();
+      }
+
+      // Arrow glyph at (x, y) with heading theta
+      const sx = cx + objectPose.t[0] * scale;
+      const sy = cy - objectPose.t[1] * scale;
+      const t = objectPose.r[2];
+
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(-t); // canvas Y is flipped
+
+      // Arrow body
+      const arrowLen = scale * 0.4;
+      const arrowW = scale * 0.15;
+      ctx.fillStyle = "#e87030";
+      ctx.beginPath();
+      ctx.moveTo(arrowLen, 0);
+      ctx.lineTo(-arrowLen * 0.4, -arrowW);
+      ctx.lineTo(-arrowLen * 0.2, 0);
+      ctx.lineTo(-arrowLen * 0.4, arrowW);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+
+      // Pivot dot
+      ctx.fillStyle = "#cc3333";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    draw();
+  </script>
+</body>
+</html>

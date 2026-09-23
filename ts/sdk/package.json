@@ -1,0 +1,39 @@
+{
+  "name": "@openaxis/sdk",
+  "version": "1.0.0-rc.1",
+  "description": "TypeScript SDK for the OpenAxis 1.0 input protocol",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js"
+    },
+    "./diagnostics": {
+      "types": "./dist/diagnostics.d.ts",
+      "import": "./dist/diagnostics.js"
+    },
+    "./geometry": {
+      "types": "./dist/geometry.d.ts",
+      "import": "./dist/geometry.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE", "LEGAL.md"],
+  "scripts": {
+    "build": "tsup",
+    "test": "tsc -p tsconfig.layers.json && pnpm build && tsc -p tsconfig.api.json && node --test test/*.test.mjs"
+  },
+  "keywords": ["openaxis", "websocket", "6dof", "spatial-input"],
+  "author": "Icebound Flame LLC <david@rotatrix.com>",
+  "license": "Elastic-2.0 OR GPL-3.0-only",
+  "packageManager": "pnpm@10.28.1",
+  "dependencies": {
+    "@msgpack/msgpack": "^3.1.3"
+  }
+}

@@ -1,0 +1,322 @@
+---
+title: Verify navigation with diagnostics
+description: Verify the facts your integration reports and the poses it applies, independently of server navigation policy.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import cppSource from '../../../../../examples/cpp_demo_3d_app/integration.hpp?raw';
+import SourceLink from '../../../components/SourceLink.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import applicationSource from '../../../../../examples/python_demo_3d_app/application.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+Use diagnostics to verify the facts your integration reports, the poses it applies
+and the corrections it sends. Camera movement alone can hide incorrect picks or
+bounds because it also reflects the server's navigation policy.
+
+This walkthrough follows logging and overlays in the runnable
+[demo applications](/guide/navigation-quickstart/). Complete that
+quickstart first so your demo is running and connected to Rotatrix. The examples
+below show how the integration collects evidence and how the application displays it.
+
+Native integrations can configure [local session logs](/guide/session-logs/)
+once to capture SDK events and host messages with automatic rotation and retention.
+Browser demos use the same logging interface with a console sink.
+
+## Try diagnostics in the demo
+
+1. Run the demo with Rotatrix connected, then press **D** to show diagnostics.
+2. Start a gesture over a cube. Compare the reported pick point and bounds with
+   the cube, then repeat over empty space and with a selection. Check which query
+   alternatives were actually evaluated.
+3. Use mouse navigation during the gesture to see correction status. Press **D**
+   again to hide the overlay; logging continues in the terminal or browser console.
+
+Normal logs include query results, gesture changes, corrections and readback
+status changes. Gesture performance summaries are collected automatically; see
+[performance summary fields](/reference/sdk-logging/#navigation-performance-summaries).
+To include correction details, enable debug logging:
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+```sh
+python examples/python_demo_3d_app/main.py --debug
+```
+
+</TabItem>
+<TabItem label="C#">
+
+```sh
+dotnet run --project examples/csharp_demo_3d_app/OpenAxisDemo.csproj -- --debug
+```
+
+</TabItem>
+<TabItem label="TypeScript">
+
+Set the second argument to `true` when creating `MyOpenAxisIntegration` in the
+demo's entry point, then reload the page. Messages appear in the browser console.
+
+<SourceLink file="typescript_demo_3d_app/main.ts" />
+
+</TabItem>
+<TabItem label="C++">
+
+For the Windows Release build from the quickstart:
+
+```sh
+cpp/build/demo/Release/openaxis_demo.exe --debug
+```
+
+</TabItem>
+</Tabs>
+
+### Understand the results
+
+| Result | Meaning |
+| --- | --- |
+| **Unknown readback** | The write succeeded, but the application did not return its resulting pose. |
+| **Equivalent / differs** | The resulting pose matches / differs under the `NavigationSession`'s comparison policy. Application constraints can legitimately change a pose. |
+| **Acknowledged** | The server acknowledged a delta correction sent by the integration. |
+| **Skipped** | An earlier alternative supplied the query result, so this alternative was not evaluated. |
+| **Returned candidate** | The first available result returned to the server. The client does not know whether the server ultimately used it. |
+
+The collector uses actual query and write results, without extra picks or camera
+reads. Retained correction status expires according to the collector configuration.
+
+## How diagnostic evidence flows
+
+Three components connect navigation to the display:
+
+- The SDK's `NavigationSession` executes queries and pose updates through the
+  application's adapter, then reports their results.
+- The SDK's `NavigationDiagnostics` collector turns those results into log
+  messages and a presentation snapshot containing text and geometry.
+- The application's logger and renderer send messages to the console and draw
+  the snapshot in the viewport.
+
+The integration creates and connects these components. Its pick resolver also
+returns a local marker position, so the collector can show where each test ran.
+
+## Collector setup
+
+At startup, the integration creates the collector and supplies it to
+`NavigationSession`. That connects the collector to actual navigation results
+and the same comparison policy used to detect camera or object changes.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+`MyOpenAxisIntegration.start()` extends the quickstart's setup here. `app`,
+`client`, `adapter` and `scheduler` are already created. Passing the collector
+to the `NavigationSession` lets it observe real navigation; the application hooks provide
+the toggle and rendering callbacks:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('        configure_logging('), integrationSource.indexOf('        app.on_camera_changed')).split('\n').map(line => line.slice(8)).join('\n').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration.start" />
+
+The SDK writes a session file and mirrors messages through Python's `logging`
+module, configured for INFO or DEBUG with `--debug`. The application hooks connect **D** to capture visibility and
+provide the renderer with presentation data and the shared palette.
+
+</TabItem>
+<TabItem label="C#">
+
+The `MyOpenAxisIntegration` constructor passes its collector to the `NavigationSession` built
+from the existing `client`, camera `adapter`, object adapter `objects` and `scheduler`:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        var fileLog = DiagnosticLog.Configure"), csharpSource.indexOf("        connection = new OpenAxisConnectionManager")).replace(/^ {8}/gm, '').trim()} />
+
+The `MyOpenAxisIntegration` constructor configures a session file with a console mirror. `DebugLogging` follows `--debug`. Its UI hook toggles capture without disabling logging:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        app.ToggleDiagnostics ="), csharpSource.indexOf("        // Match the Python frame loop")).replace(/^ {8}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.MyOpenAxisIntegration" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The `MyOpenAxisIntegration` constructor receives the application and creates its
+client before this excerpt. The configured SDK logger formats messages for the browser
+console, and `contextKey` associates camera and object evidence with the same viewport:
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('    configureLogging('), typescriptSource.indexOf('    this.connection = new OpenAxisConnectionManager')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.constructor" />
+
+</TabItem>
+<TabItem label="C++">
+
+The demo's `MyOpenAxisIntegration` constructor initializes the collector before the session
+so it remains alive for the session's lifetime. This excerpt from its initializer
+list connects the collector to the demo log and session; `client` and `scheduler`
+are earlier members:
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('          collector([debug]'), cppSource.indexOf('        app.on_camera_changed')).replace(/^ {10}/gm, '').trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+## Picker evidence
+
+A pick crosshair shows where the application tested the scene, including tests
+that missed. When `NavigationSession` requests a pick fact, the demo's resolver
+calls the application's picker and returns `markerPosition` alongside the hit
+point and bounds. A miss returns only the marker position. A skipped test, such
+as a selection pick with no selection, returns the unavailable value.
+
+The collector reads that position from the resolver result. The SDK removes it
+before choosing an available candidate and sending the response, so a miss still
+allows the next `first` alternative to run.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+`MyQueryCapture.resolve()` chooses the saved cursor or viewport center and checks
+that a test can run. `app` is the application captured for this query:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('            pixel = self.cursor'), integrationSource.indexOf('        return UNAVAILABLE', integrationSource.indexOf("            return {'markerPosition': pixel}"))).split('\n').map(line => line.slice(12)).join('\n').trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyQueryCapture.resolve" />
+
+</TabItem>
+<TabItem label="C#">
+
+`MyQueryCapture.Resolve()` uses the captured viewport size and cursor. After a
+test, it returns the same screen point for the overlay to display:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf('            Point? pixel ='), csharpSource.indexOf('\n        }', csharpSource.indexOf('            Point? pixel ='))).replace(/^ {12}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyQueryCapture.Resolve" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+`MyQueryCapture.resolve()` passes the query's sample position to `MyApplication.pick()`.
+The picker supplies `sample.ray` whenever a test ran, including a miss; it returns
+an empty sample when the test was skipped:
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('    const pixel: [number, number]'), typescriptSource.indexOf('\n  }', typescriptSource.indexOf('    const pixel: [number, number]'))).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyQueryCapture.resolve" />
+
+</TabItem>
+<TabItem label="C++">
+
+The demo's `MyQueryCapture::resolve` derives `x` and `y` from the requested cursor or
+center sample. `only` indicates a selection-only test. After validating those
+inputs, it returns the pick and local marker coordinates:
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('            auto hit = app.pick(x, y, only);'), cppSource.indexOf('\n        }', cppSource.indexOf('            auto hit = app.pick(x, y, only);'))).replace(/^ {12}/gm, '').trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+The demo renderers interpret `markerPosition` in their own viewport coordinates.
+This local position is distinct from the protocol's cursor coordinates; other
+applications can use a different convention, such as NDC. Samples at identical
+positions with the same tone share a crosshair with separate label lines. The
+[pick evidence reference](/reference/diagnostics/#pick-evidence) describes
+the return contract.
+
+## Application display
+
+A presentation snapshot contains text rows, world-space segments and screen
+markers. Its context identifies the view that produced the evidence; its expiry
+deadline tells the application when retained status needs refreshing. This lets
+the renderer display the collected results without re-running queries.
+
+The application reads the snapshot on the collector's owning thread, draws it in
+the matching view, and refreshes after expiry even if no new event arrives.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+Panda3D's frame callback calls `MyApplication._draw_diagnostics()`. It checks context, revision,
+expiry and viewport size before rebuilding:
+
+<Code lang="python" code={applicationSource.slice(applicationSource.indexOf('    def _draw_diagnostics('), applicationSource.indexOf('        from direct.gui.OnscreenText import OnscreenText', applicationSource.indexOf('    def _draw_diagnostics('))).split('\n').map(line => line.slice(4)).join('\n').trim()} />
+
+<SourceLink file="python_demo_3d_app/application.py" symbol="MyApplication._draw_diagnostics" />
+
+The renderer uses the presentation's text, tones, segments and markers. Its
+drawing implementation is available in the full source.
+
+</TabItem>
+<TabItem label="C#">
+
+The raylib demo renders SDK text rows, colored world segments and screen markers in
+an overlay. The integration registers `RefreshDiagnostics` with the application's frame
+event at startup. That callback checks for changed or expired presentation data:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf('    void RefreshDiagnostics('), csharpSource.indexOf('    void PublishMetadata(')).replace(/^ {4}/gm, '').trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.RefreshDiagnostics" />
+
+`MyApplication.DrawDiagnostics()` maps tones through `DiagnosticPalette.Color`,
+projects segments using the current camera and draws markers in raylib's screen coordinates.
+The overlay is excluded from scene bounds and picking. `StopAsync` detaches the
+render callback and clears the display before the native window closes.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+At startup, the demo calls the integration's `showDiagnostics` helper with its
+viewport, camera accessor and context check. The helper starts an animation-frame
+loop and returns a cleanup function that the demo calls at shutdown:
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region display') + '// #region display'.length, typescriptSource.indexOf('// #endregion display')).replace(/^ {0}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="showDiagnostics" />
+
+`NavigationDiagnosticOverlay` is demo code. On each frame it reads the SDK
+presentation, checks its context and expiry, and draws text, world segments and
+viewport-pixel markers using `DIAGNOSTIC_COLORS`.
+
+</TabItem>
+<TabItem label="C++">
+
+The GLFW loop reads `collector.presentation()` when redrawing. The demo's
+`render_navigation_overlay` clips world segments to the current camera frustum,
+projects them and draws labeled crosshairs. After drawing, the loop waits for an
+input event, scheduled work or the presentation's expiry deadline, whichever
+comes first.
+
+[C++ diagnostic renderer](/source/cpp_demo_3d_app/diagnostic_view.cpp/).
+
+</TabItem>
+</Tabs>
+
+## Adapt it to your application
+
+Use the [Diagnostics API](/reference/diagnostics/) for evidence fields, context
+mapping, thread ownership and refresh scheduling. Follow the
+[rendering contract](/reference/diagnostic-rendering/) when mapping that evidence
+to native graphics. Use [local session logs](/guide/session-logs/) to route output,
+or [observer events](/reference/diagnostic-events/) for a custom consumer.
+
+## Verify each supported input
+
+Check reported facts against known application state before judging navigation.
+Cover each supported fact, including unavailable cases:
+
+- **Picking:** cursor and viewport-center samples, with and without a selection;
+  hits, misses and a cursor outside the viewport.
+- **Geometry and camera:** bounds, orientation and camera pose in both projection
+  types, with wide and tall viewports.
+- **Pose application:** requested versus observed poses, including constraints and
+  concurrent native input; verify the resulting corrections.
+- **Context:** switch documents, views and object targets; evidence must remain
+  associated with the context that produced it.
+
+A **skipped** alternative has not been tested: exercise a query that requests it
+or test the resolver directly. Do not count a plausible server-chosen pivot as
+verification of all pick alternatives. Compare diagnostics enabled and disabled:
+camera behavior and query results should match. Check expiry and shutdown cleanup.
+If you add a graphical overlay, verify its markers, bounds and context filtering too.

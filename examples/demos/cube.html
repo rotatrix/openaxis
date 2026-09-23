@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAxis — SE3 Cube</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { overflow: hidden; background: #000; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from "three";
+    import { OpenAxisClient, NavigationSession, UNAVAILABLE } from "../../ts/sdk/src/index.js";
+    import { manageFocus } from "./lib/focus-manager.js";
+    import { createStatusHUD } from "./lib/status-hud.js";
+    import { Quat } from "../../ts/sdk/src/geometry/index.js";
+    const threeQuatToRotvec = q => new Quat(q.w, q.x, q.y, q.z).toRotvec();
+    const rotvecToThreeQuat = r => {
+      const q = Quat.fromRotvec(...r);
+      return new THREE.Quaternion(q.x, q.y, q.z, q.w);
+    };
+
+    // --- Scene setup ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 3);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // --- Face textures (canvas-generated) ---
+    const faceConfig = [
+      { label: "A", color: "#cc44cc" }, // -X magenta
+      { label: "B", color: "#00cccc" }, // +X cyan
+      { label: "C", color: "#44cc44" }, // -Y green
+      { label: "D", color: "#cccc00" }, // +Y yellow
+      { label: "E", color: "#4466cc" }, // -Z blue
+      { label: "F", color: "#cc4444" }, // +Z red
+    ];
+
+    function makeFaceTexture(label, color) {
+      const size = 256;
+      const c = document.createElement("canvas");
+      c.width = size;
+      c.height = size;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 140px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, size / 2, size / 2);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const materials = faceConfig.map(({ label, color }) =>
+      new THREE.MeshBasicMaterial({ map: makeFaceTexture(label, color) })
+    );
+
+    // --- Cube ---
+    const group = new THREE.Group();
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const cube = new THREE.Mesh(geometry, materials);
+    group.add(cube);
+
+    // Edge lines
+    const edges = new THREE.EdgesGeometry(geometry);
+    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+    group.add(line);
+
+    scene.add(group);
+
+    // SDK session owns gesture binding, ordering and query replies.
+    let alive = true, stopping, animationFrame;
+    const updateHUD = createStatusHUD();
+    const client = new OpenAxisClient({ clientName: "demo-cube" });
+    const objectPose = () => ({ t: group.position.toArray(), r: threeQuatToRotvec(group.quaternion) });
+    const cameraPose = () => ({ t: camera.position.toArray(), r: threeQuatToRotvec(camera.quaternion), fov: camera.fov * Math.PI / 180 });
+    const bounds = () => {
+      const box = new THREE.Box3().setFromObject(cube);
+      return { min: box.min.toArray(), max: box.max.toArray() };
+    };
+    const cameraAdapter = {
+      captureContext: () => alive ? camera : undefined,
+      isCurrent: context => alive && context === camera,
+      beginQuery() {
+        scene.updateMatrixWorld(true);
+        const pose = cameraPose();
+        let box;
+        const queryBounds = () => box ??= bounds();
+        return { resolve(name) {
+          switch (name) {
+            case "document.id": return "demo-cube";
+            case "world.orientation": return { forward: [0, 0, -1], up: [0, 1, 0], handedness: "right" };
+            case "camera.pose": return pose;
+            case "viewport.aspect": return camera.aspect;
+            case "camera.view_target": return group.position.toArray();
+            case "selection.bounds":
+            case "model.bounds": return queryBounds();
+            default: return UNAVAILABLE;
+          }
+        } };
+      },
+      // Camera facts establish the reference frame; the camera remains fixed.
+      applyPose: () => ({ success: false }),
+    };
+    const objectAdapter = {
+      captureContext: () => alive ? group : undefined,
+      isCurrent: context => alive && context === group,
+      beginQuery() {
+        scene.updateMatrixWorld(true);
+        const pose = objectPose(), box = bounds();
+        return { resolve: name => name === "object.pose" ? pose : name === "object.bounds" ? box : UNAVAILABLE };
+      },
+      applyPose(context, pose) {
+        group.position.fromArray(pose.t); group.quaternion.copy(rotvecToThreeQuat(pose.r));
+        return { success: true, realizedPose: objectPose() };
+      },
+    };
+    const session = new NavigationSession(client, cameraAdapter, {
+      objectAdapter,
+    });
+    const cancelGesture = () => session.contextChanged();
+    const fm = manageFocus(client, {
+      metadata: () => ({ tags: ["interaction.object.transform"], capabilities: ["navigation"] }),
+      onState: updateHUD,
+      onPauseChange(paused) { updateHUD.setPaused(paused); if (paused) cancelGesture(); },
+    });
+    const onKey = e => { if (e.key === "Escape") fm.isPaused() ? fm.resume() : fm.pause(); };
+    const onClick = () => fm.resume();
+    const onResize = () => {
+      camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+      renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight);
+    };
+    const onPageHide = event => {
+      if (event.persisted) cancelGesture();
+      else void shutdown().catch(error => console.error("Cube shutdown failed", error));
+    };
+    addEventListener("keydown", onKey); addEventListener("blur", cancelGesture);
+    addEventListener("resize", onResize); addEventListener("pagehide", onPageHide);
+    renderer.domElement.addEventListener("click", onClick);
+    function shutdown() {
+      if (stopping) return stopping;
+      alive = false; cancelAnimationFrame(animationFrame);
+      removeEventListener("keydown", onKey); removeEventListener("blur", cancelGesture);
+      removeEventListener("resize", onResize); removeEventListener("pagehide", onPageHide);
+      renderer.domElement.removeEventListener("click", onClick);
+      stopping = (async () => {
+        try { await fm.destroy(); }
+        finally {
+          session.close(); session.drain();
+          geometry.dispose(); edges.dispose(); line.material.dispose();
+          for (const material of materials) { material.map.dispose(); material.dispose(); }
+          renderer.dispose();
+        }
+      })();
+      return stopping;
+    }
+    function animate() {
+      if (!alive) return;
+      animationFrame = requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>

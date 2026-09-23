@@ -1,0 +1,7 @@
+---
+import { sourceLink } from '../source-files.mjs';
+const { file, symbol } = Astro.props;
+const href = sourceLink(file, symbol);
+---
+<p class="source-link"><a href={href}>View full implementation{symbol ? `: ${symbol}` : ''} →</a></p>
+<style>.source-link { font-size: 0.875rem; margin-top: 0.5rem; }</style>

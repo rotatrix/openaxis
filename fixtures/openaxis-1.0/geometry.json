@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "convention": "A=Exp(r); camera right=h*A*+X, up=A*+Y, backward=A*+Z, where h is +1 for right-handed and -1 for left-handed client worlds",
+  "tolerance": 1e-12,
+  "quaternion_inverse": [
+    {
+      "name": "identity",
+      "quaternion": [1.0, 0.0, 0.0, 0.0],
+      "expected_product": [1.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "name": "normalized arbitrary rotation",
+      "quaternion": [0.9233805168766387, 0.10259783520851541, -0.20519567041703082, 0.3077935056255462],
+      "expected_product": [1.0, 0.0, 0.0, 0.0]
+    }
+  ],
+  "camera_basis_from_rotvec": [
+    {
+      "name": "right-handed identity",
+      "handedness": "right",
+      "r": [0.0, 0.0, 0.0],
+      "expected": {
+        "right": [1.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0],
+        "backward": [0.0, 0.0, 1.0]
+      }
+    },
+    {
+      "name": "left-handed identity factors the reflection",
+      "handedness": "left",
+      "r": [0.0, 0.0, 0.0],
+      "expected": {
+        "right": [-1.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0],
+        "backward": [0.0, 0.0, 1.0]
+      }
+    },
+    {
+      "name": "right-handed quarter turn about numeric Y",
+      "handedness": "right",
+      "r": [0.0, 1.5707963267948966, 0.0],
+      "expected": {
+        "right": [0.0, 0.0, -1.0],
+        "up": [0.0, 1.0, 0.0],
+        "backward": [1.0, 0.0, 0.0]
+      }
+    },
+    {
+      "name": "left-handed quarter turn about numeric Y",
+      "handedness": "left",
+      "r": [0.0, 1.5707963267948966, 0.0],
+      "expected": {
+        "right": [0.0, 0.0, 1.0],
+        "up": [0.0, 1.0, 0.0],
+        "backward": [1.0, 0.0, 0.0]
+      }
+    }
+  ],
+  "pose_from_look_at": [
+    {
+      "name": "identity camera",
+      "eye": [0.0, 0.0, 10.0],
+      "target": [0.0, 0.0, 0.0],
+      "up": [0.0, 1.0, 0.0],
+      "projection": { "fov": 1.0 },
+      "expected": { "t": [0.0, 0.0, 10.0], "r": [0.0, 0.0, 0.0], "fov": 1.0 }
+    },
+    {
+      "name": "quarter turn about world up",
+      "eye": [10.0, 0.0, 0.0],
+      "target": [0.0, 0.0, 0.0],
+      "up": [0.0, 1.0, 0.0],
+      "projection": { "ortho_extent": 8.0 },
+      "expected": {
+        "t": [10.0, 0.0, 0.0],
+        "r": [0.0, 1.5707963267948966, 0.0],
+        "ortho_extent": 8.0
+      }
+    },
+    {
+      "name": "coincident eye and target",
+      "eye": [1.0, 2.0, 3.0],
+      "target": [1.0, 2.0, 3.0],
+      "up": [0.0, 0.0, 1.0],
+      "projection": { "fov": 0.75 },
+      "expected": { "t": [1.0, 2.0, 3.0], "r": [0.0, 0.0, 0.0], "fov": 0.75 }
+    }
+  ],
+  "look_at_from_pose": [
+    {
+      "name": "default target distance",
+      "pose": { "t": [1.0, 2.0, 3.0], "r": [0.0, 0.0, 0.0], "fov": 1.0 },
+      "default_distance": 10.0,
+      "pivot": null,
+      "expected": {
+        "eye": [1.0, 2.0, 3.0],
+        "target": [1.0, 2.0, -7.0],
+        "up": [0.0, 1.0, 0.0]
+      }
+    },
+    {
+      "name": "pivot determines target distance",
+      "pose": { "t": [0.0, 0.0, 10.0], "r": [0.0, 0.0, 0.0], "ortho_extent": 8.0 },
+      "default_distance": 2.0,
+      "pivot": [0.0, 0.0, 0.0],
+      "expected": {
+        "eye": [0.0, 0.0, 10.0],
+        "target": [0.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0]
+      }
+    },
+    {
+      "name": "quarter-turn camera target",
+      "pose": { "t": [10.0, 0.0, 0.0], "r": [0.0, 1.5707963267948966, 0.0], "fov": 1.0 },
+      "default_distance": 10.0,
+      "pivot": null,
+      "expected": {
+        "eye": [10.0, 0.0, 0.0],
+        "target": [0.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0]
+      }
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+---
+title: OpenAxis connection manager
+description: Connect, retry, reannounce application metadata, and stop through one SDK component.
+---
+
+All four SDKs use `OpenAxisConnectionManager` to supervise an existing protocol client.
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+Use `OpenAxisConnectionManager` to keep an application connected while the OpenAxis
+server starts, stops, or restarts. It supervises an existing client, replays the
+latest application metadata, and reuses the attached navigation session.
+
+The application supplies native adapters, a scheduler, and current metadata. It
+decides when networking starts and stops. The SDK handles retries and transport
+cleanup. Low-level clients remain available for deliberate one-shot connections.
+
+## Lifecycle API
+
+For runnable setup and teardown, follow [Connection recovery and shutdown](/guide/connection-shutdown/).
+Create and retain one client, session and connection owner for the integration lifetime.
+
+| Language | Start | Stop | Execution requirements |
+| --- | --- | --- | --- |
+| Python | Schedule `connection.run()`; a concurrent second run raises `RuntimeError` | Await `connection.stop()`; cancel and await an owned task if shutdown precedes its startup | Lifecycle operations share one asyncio loop; no thread or loop is created by the manager |
+| C# | Retain the whole-run task from `StartAsync(token)`; repeated calls share it | Await `StopAsync()` and the run task | Metadata providers and observers run on the networking thread; publish immutable snapshots of UI state |
+| TypeScript | Retain `connection.start()` | Await `connection.stop()` | Use the application's event loop and await teardown before replacement |
+| C++ | `connection.start()` is nonblocking and idempotent | `connection.stop()` cancels retries, joins networking and invalidates queued delivery | Use the application thread with the required `OpenAxisClientOptions::scheduler` |
+
+Python accepts an async metadata provider, which must cooperate with cancellation.
+Embedded hosts supply their own thread-safe bridge to the networking loop.
+C++ takes an existing `OpenAxisClient` and `OpenAxisConnectionManagerOptions` containing a
+required `metadata` callback and optional `RetryPolicy`. The client and scheduler
+must outlive the manager. Only one manager may own a client, and applications must
+not independently start or stop that client while the manager is running.
+`status()` / `on_state` report progress, retry deadlines and errors on the application
+thread. C++ does not expose a custom connector.
+
+Set C++ `startup_timeout` in seconds to bound each connection attempt through
+metadata announcement. A synchronous metadata provider must return promptly:
+the manager checks its deadline before and after the call but cannot interrupt it.
+The optional `log(level, message)` callback receives lifecycle messages; failures
+in this callback or `on_state` do not interrupt cleanup.
+
+## Responsibilities
+
+| Owner | Responsibility |
+| --- | --- |
+| `OpenAxisConnectionManager` | Serial connection attempts, startup deadline, backoff, metadata replay, logs, disconnect waiting, cancellation and transport shutdown |
+| `OpenAxisClient` | Handshake, heartbeat, framing, message dispatch, request correlation |
+| `NavigationSession` | Camera/object ordering, gestures, connection-generation invalidation, stale-output rejection |
+| Integration | Native operations, UI dispatch, current application metadata, application startup/shutdown, status presentation |
+
+Keep one client, one connection manager, and at most one `NavigationSession` together.
+While supervised, use the manager's start/stop methods instead of independently calling
+client connect/disconnect. Keep the `NavigationSession` attached across retries; close it
+when the integration shuts down.
+
+## Readiness and retry policy
+
+The normal sequence is `stopped → connecting → ready`. A connection or startup
+failure moves to `retrying`, then back to `connecting`. Losing a ready connection
+also triggers cleanup and retry. Shutdown ends in `stopped`.
+
+Client **connected** means the handshake completed. Lifecycle **ready** means the
+connection operation completed and the complete metadata snapshot was sent.
+This is local send completion, not a server acknowledgement of configuration.
+
+Manager defaults match across Python/C#/TypeScript:
+
+| Setting | Default |
+| --- | --- |
+| Startup timeout | 5 seconds |
+| Initial retry delay | 2 seconds |
+| Backoff multiplier | 2 |
+| Maximum retry delay | 4 seconds |
+| Jitter | ±20%, capped at the maximum |
+| Backoff reset | After reaching ready |
+
+Configure `RetryPolicy` using seconds in Python, millisecond properties in
+TypeScript, and `TimeSpan` delays in C#. Retries continue until stopped, including
+for persistent errors. Use retry notifications to present configuration errors.
+Observers are passive: an observer exception is reported without breaking cleanup.
+A cleanup failure ends the run rather than risking overlapping connections.
+
+An optional custom connection operation can perform application initialization
+before readiness: TypeScript `connect(signal)` or C# constructor argument
+`connect`. It must connect the same client and honor cancellation. Python accepts
+a compatible client object with a custom `connect()`. Custom asynchronous startup
+is awaited before reuse; ignoring cancellation can delay shutdown. Keep metadata
+providers short and use cached facts.
+
+## Lifecycle logging
+
+The SDK emits formatted messages for each connection attempt, readiness, retry,
+and completed shutdown. Retry messages include the failure reason and next delay.
+Attempts, readiness, and shutdown use `info`; retries use `warning`.
+
+Use the optional `log(level, message)` callback in Python, C# and TypeScript to route
+these messages to your application's log destination. By default Python uses the
+`openaxis` logger (configure its level to see informational messages), TypeScript
+uses the console, and C# uses `System.Diagnostics.Trace`.
+
+State observers are for application behavior and UI status; they do not need to
+recreate lifecycle logs. A throwing log callback cannot interrupt connection or
+cleanup. No logging callback should access thread-bound host APIs without posting
+to the application's UI dispatcher.
+
+## Metadata is desired state
+
+The provider returns a complete current snapshot after every connection.
+The lifecycle sends tags, capabilities, optional axis subscription, then optional
+focus. Missing tags/capabilities default to empty lists. Omitted axes/focus produce
+no announcement. Empty axes explicitly subscribe to no axes; `false` focus is sent.
+
+For Axis Streaming, the metadata-provider result supplies axes and omits navigation
+capabilities. The following value replaces
+the Navigation metadata in the examples above; the manager calls the provider
+on connect and refresh.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="TypeScript">
+
+```ts
+metadata: () => ({
+  tags: ["app.parameters"],
+  axes: ["tx", "ty", "tz", "rx", "ry", "rz"],
+})
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+ConnectionMetadata(tags=("app.parameters",),
+                   axes=("tx", "ty", "tz", "rx", "ry", "rz"))
+```
+
+</TabItem>
+<TabItem label="C#">
+
+```csharp
+new ConnectionMetadata
+{
+    Tags = new[] { "app.parameters" },
+    Axes = new[] { "tx", "ty", "tz", "rx", "ry", "rz" },
+}
+```
+
+</TabItem>
+<TabItem label="C++">
+
+Supply a callback returning `ConnectionMetadata` with `tags`, `capabilities`, optional
+`axes` and optional `focused`. The manager reads it after each handshake and announces
+the snapshot before reporting `ready`. Call `connection.refresh_metadata()` on the
+application thread after changing that state; it publishes synchronously when connected
+and does nothing while offline. Startup snapshot failures enter retry backoff; explicit
+refresh failures propagate to the caller. Low-level client setters send only on the
+current connection and do not retain values for replay.
+
+</TabItem>
+</Tabs>
+
+For Navigation, announce `["navigation"]`; omit axes unless also using streaming.
+
+For metadata changes during a connection, see
+[Application context and focus](/guide/dynamic-tags/). That recipe covers the
+refresh APIs, event wiring, disconnected behavior, errors and update-task cleanup.
+
+The lifecycle does not discover application focus or document changes. The
+integration updates these facts. A browser may retain its connection on blur and
+report `focused: false`. An explicit pause should stop the lifecycle so retries
+cannot undo the pause. Await stopping before resuming.
+
+## Shutdown order
+
+1. Stop producing new application work.
+2. Await lifecycle shutdown and transport cleanup.
+3. Close/dispose the navigation session while the scheduler and native resources exist.
+4. Drain required UI cleanup, then remove timers/listeners and destroy graphics.
+
+Python synchronous sessions use `session.close()`; asynchronous sessions use
+`await session.close()`. TypeScript uses `session.close()` and C# uses
+`session.Dispose()`.
+
+Do not block the UI thread waiting for networking if queued application work
+needs that thread to finish. The asynchronous Python session waits for already
+issued application operations; their transport needs its own operation timeouts.
+
+See [validation](/guide/validation/) and
+[the quickstart’s component overview](/guide/navigation-quickstart/#how-the-integration-works) for integration checks and component boundaries.
+
+For C++, stop native ticks, call `connection.stop()` and close the session while
+its adapters and host resources are alive. `stop()` joins networking
+and may invoke pending RPC/connection callbacks synchronously.
+
+## RPC request deadlines
+
+Outgoing RPC requests default to five seconds in all four SDKs. Override the
+per-request timeout through Python's `timeout`, C#'s `timeout`, TypeScript's
+`timeoutMs` (milliseconds), or C++'s `timeout_seconds`. Python/C++ numeric
+timeouts are in seconds; C# accepts a `TimeSpan`. This deadline is separate
+from connection startup, retry delays and navigation acknowledgement timeouts.

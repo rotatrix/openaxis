@@ -1,0 +1,104 @@
+---
+title: Free camera movement
+description: Share object editing across orbit and free-camera modes in one demo profile.
+---
+
+import { Code } from '@astrojs/starlight/components';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+
+Free camera moves and turns the camera without orbiting a scene pivot. The
+Python, TypeScript, C#, and C++ demos can demonstrate both behaviors with the same Navigation adapter.
+Rotatrix computes the movement; the application still answers fact queries and
+applies `camera.pose` through its existing `NavigationSession`.
+
+## One profile, two camera modes
+
+All four viewers always publish `demo-3d-services`. **F** adds or removes
+`navigation.hint.free_camera`, selecting a camera branch inside that
+same shared navigation profile (selected by the navigation capability):
+
+| Preference | Camera tags |
+| --- | --- |
+| Orbit (initial) | `demo-3d-services` |
+| Free camera | `demo-3d-services`, `navigation.hint.free_camera` |
+
+Rotatrix’s default navigation profile handles both camera modes and object edits.
+The following device controls are customizable Rotatrix mappings; neither the
+SDK nor the demo defines them. Check Rotatrix for the active bindings. With
+default controls, Shift translates an object and button 3 toggles world snapping.
+Camera activation temporarily overrides object input; releasing it resumes the
+edit with its snap state retained. On macOS, orbit uses Ctrl and free camera uses Cmd.
+
+These tags describe preference and context. The user profile still owns camera
+mode, constraints, mappings, and speed. No client-side movement math is needed.
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('    def _tags('), integrationSource.indexOf('    def _metadata(')).replace(/^ {4}/gm, '').trim()} />
+
+In Python, the application stores `free_camera` and emits `on_navigation_changed` when F
+changes it. The integration routes that event to `_metadata_changed`, using the
+same metadata refresh path as focus changes. Each snapshot includes the complete
+tag set, capabilities, and focus. Reconnection reads the current preference,
+including changes made while disconnected. Shutdown detaches the callback.
+See [Application context and focus](/guide/dynamic-tags/) for that lifecycle.
+
+The status line displays the application's preference. Rotatrix keeps the user's
+shared navigation profile selected in both modes; no demo-specific import is needed.
+
+## Translation distance
+
+All four demo query adapters supply the same
+characteristic distance in world units:
+
+```python
+if name == 'navigation.translation_scale':
+    return 4.0
+```
+
+The C++ demo returns the same four-unit value from its `fact` callback.
+
+Rotatrix interprets this as **four world units per quarter turn of the ball at
+unit gain** in position mode. The demo grid lines are two world units apart, so
+this spans two visible grid squares. User gain changes the distance; Alt's rate
+mode instead continues movement over time. Orbit keeps its pivot/projection-based
+translation scaling. The value is an application fact answered when requested,
+not a profile tag or client-side pose multiplier.
+
+## Demonstrate it
+
+Run any of the [3D app demos](/guide/navigation-quickstart/) with Rotatrix running,
+then focus its window. Use perspective projection for a clear travel demonstration
+(**O** toggles projection).
+
+1. Start in orbit and navigate around an object. Notice the scene pivot.
+2. Release navigation controls, press **F**, and confirm the free-camera
+   preference in the status line and the matching profile in Rotatrix.
+3. Hold **Win** on Windows, **Cmd** on macOS, **Super** on Linux, or **button 4**.
+   Roll to travel and twist to turn. Move past the objects using the ground grid
+   as a reference for distance.
+4. While activated, hold **Shift/button 2** to look or **Ctrl/button 1** to change
+   height. Add **Alt** for continuous rate movement; release activation to clear
+   the rates. These are the built-in profile's controls and can be customized.
+5. Release controls and press **F** again. Orbit resumes from the current camera
+   pose. **R** resets the scene if you travel out of sight.
+
+The existing mouse navigation remains available. During an edit, the same object
+rotation, translation, snapping, and accept/cancel controls work in both modes.
+Hold a camera activation control to navigate, then release it to resume editing.
+
+## Verify the integration
+
+Toggle while idle and confirm that `demo-3d-services` stays present while
+`navigation.hint.free_camera` is added or removed.
+Disconnect, change the preference, then reconnect: the latest tag should be
+announced. Repeat with an active object edit and confirm its interaction tags
+survive, and that button 3's world-snap state survives an F toggle. The camera adapter should continue applying server poses without any
+branch on free-camera mode. Use **D** for Navigation diagnostics.
+
+All four viewers implement this toggle with the same profile tags. TypeScript
+refreshes metadata on its `navigation` event; C# uses `NavigationChanged` and
+publishes a fresh metadata snapshot. Both detach their handlers on shutdown.
+
+The C++ demo publishes the same preference from `MyOpenAxisIntegration::update` after native
+input. It refreshes the connection manager's metadata when tags change; the
+manager reads the current snapshot again on reconnect. Its camera writer has no
+free-camera-specific branch.

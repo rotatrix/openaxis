@@ -1,0 +1,74 @@
+{
+  "corrections": [
+    {
+      "stream": "camera",
+      "state": "sent",
+      "id": 1,
+      "time": 0,
+      "visible": 1
+    },
+    {
+      "stream": "object",
+      "state": "sent",
+      "id": 1,
+      "time": 0,
+      "visible": 2
+    },
+    {
+      "stream": "object",
+      "state": "applied",
+      "id": 1,
+      "time": 0,
+      "visible": 2
+    },
+    {
+      "stream": "camera",
+      "state": "waiting",
+      "id": 1,
+      "time": 2,
+      "visible": 1
+    },
+    {
+      "stream": "camera",
+      "state": "applied",
+      "id": 1,
+      "time": 2,
+      "visible": 1
+    }
+  ],
+  "expire_at": 4,
+  "lifecycle": [
+    {
+      "event": "gesture_started",
+      "id": 7,
+      "reason": "",
+      "level": "info",
+      "message": "gesture_started: gesture_id=7",
+      "status": "gesture 7 started"
+    },
+    {
+      "event": "output_rejected",
+      "id": 7,
+      "reason": "inactive_or_stale_output",
+      "level": "warning",
+      "message": "output_rejected: kind=camera.pose, gesture_id=7, reason=inactive_or_stale_output",
+      "status": "output_rejected: kind=camera.pose, gesture_id=7, reason=inactive_or_stale_output"
+    },
+    {
+      "event": "cancelled",
+      "id": 7,
+      "reason": "camera_delta_timeout",
+      "level": "info",
+      "message": "cancelled: gesture_id=7, reason=camera_delta_timeout",
+      "status": "gesture finished: camera_delta_timeout"
+    },
+    {
+      "event": "gesture_finished",
+      "id": 7,
+      "reason": "camera_delta_timeout",
+      "level": "info",
+      "message": "gesture_finished: gesture_id=7, reason=camera_delta_timeout",
+      "status": "gesture finished: camera_delta_timeout"
+    }
+  ]
+}

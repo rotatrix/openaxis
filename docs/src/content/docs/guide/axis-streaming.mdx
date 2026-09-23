@@ -1,0 +1,222 @@
+---
+title: Axis Streaming quickstart
+description: Receive logical Rotatrix axis rates through OpenAxisClient callbacks.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import typescriptSource from '../../../../examples/typescript/axis-streaming.ts?raw';
+
+Use Axis Streaming when your application needs to interpret input itself.
+For 3D camera or object movement, I strongly recommend the
+[Navigation quickstart](/guide/navigation-quickstart/).
+
+## Receive input
+
+The examples subscribe to all six standard axes and print each incoming rate
+beside its name. Rotatrix must be running. Python and C# use standalone console
+programs; C++ uses native scheduler dispatch and TypeScript provides a helper for an existing browser application.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+From the OpenAxis repository root, install the Python SDK with
+`python -m pip install -e py/openaxis`. Save this as a Python script and run it
+while Rotatrix is running:
+
+```python
+import asyncio
+from openaxis.client import OpenAxisClient, OpenAxisListener
+from openaxis.connection_manager import OpenAxisConnectionManager, ConnectionMetadata
+
+
+class MyAxisConsumer(OpenAxisListener):
+    def __init__(self):
+        self.axes = []
+
+    def on_axes(self, axes):
+        self.axes = axes  # Server-confirmed order for subsequent frame values.
+
+    def on_frame(self, frame):
+        print(frame.t_us, dict(zip(self.axes, frame.values)))
+
+
+async def main():
+    client = OpenAxisClient(client_name="axis-example", listener=MyAxisConsumer())
+    connection = OpenAxisConnectionManager(
+        client,
+        metadata=lambda: ConnectionMetadata(
+            tags=("app.axis-example",),
+            axes=("tx", "ty", "tz", "rx", "ry", "rz"),
+            focused=True,  # This standalone example claims focus.
+        ),
+    )
+    await connection.run()  # Retry until interrupted; cancellation cleans up.
+
+
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    pass
+```
+
+</TabItem>
+<TabItem label="C#">
+
+Requires the .NET 8 SDK or newer. From the OpenAxis root, create the console
+project and reference the SDK:
+
+```sh
+dotnet new console -o axis-example
+dotnet add axis-example reference cs/OpenAxis/OpenAxis.csproj
+```
+
+Replace `axis-example/Program.cs` with this complete program, then run
+`dotnet run --project axis-example`. **Ctrl+C** stops networking.
+
+```csharp
+using OpenAxis.Client;
+
+using var stop = new CancellationTokenSource();
+Console.CancelKeyPress += (_, e) => { e.Cancel = true; stop.Cancel(); };
+var client = new OpenAxisClient("axis-example", new MyAxisConsumer());
+var connection = new OpenAxisConnectionManager(client, () => new ConnectionMetadata
+{
+    Tags = new[] { "app.axis-example" },
+    Axes = new[] { "tx", "ty", "tz", "rx", "ry", "rz" },
+    Focused = true, // This standalone example claims focus.
+});
+await connection.StartAsync(stop.Token);
+
+sealed class MyAxisConsumer : OpenAxisListenerBase
+{
+    string[] axes = Array.Empty<string>();
+    public override void OnAxes(string[] value) => axes = value;
+    public override void OnFrame(Frame frame)
+    {
+        for (int i = 0; i < Math.Min(axes.Length, frame.Values.Length); i++)
+            Console.WriteLine($"{axes[i]}: {frame.Values[i]}");
+    }
+}
+```
+
+</TabItem>
+<TabItem label="TypeScript">
+
+Install with `pnpm add @openaxis/sdk` in a TypeScript browser project. This
+complete lifecycle helper prints axis rates and reports actual focus changes.
+Call `startAxisStreaming()` at startup; retain the returned function and await it
+at application-controlled teardown.
+
+<Code lang="typescript" code={typescriptSource.trim()} />
+
+[Complete TypeScript source](/examples/typescript/axis-streaming.ts).
+
+</TabItem>
+<TabItem label="C++">
+
+This fragment belongs in an existing application's event loop. Link `OpenAxis::openaxis` and include `<openaxis/connection_manager.hpp>` and `<iostream>`.
+
+```cpp
+struct MyAxisConsumer : openaxis::OpenAxisListener {
+    std::vector<std::string> axes;
+    void on_axes(const std::vector<std::string>& value) override { axes = value; }
+    void on_frame(const openaxis::Frame& frame) override {
+        for (std::size_t i = 0; i < axes.size() && i < frame.values.size(); ++i)
+            std::cout << frame.t_us << " " << axes[i] << ": " << frame.values[i] << '\n';
+    }
+};
+
+openaxis::OpenAxisClientOptions options;
+options.client_name = "axis-example";
+options.scheduler = &scheduler; // Host implementation of openaxis::Scheduler.
+openaxis::OpenAxisClient client(options, std::make_shared<MyAxisConsumer>());
+openaxis::ConnectionMetadata metadata;
+metadata.tags = {"app.axis-example"};
+metadata.axes = std::vector<std::string>{"tx", "ty", "tz", "rx", "ry", "rz"};
+openaxis::OpenAxisConnectionManager connection(client, {[&] { return metadata; }});
+connection.start();
+// On native focus changes:
+// metadata.focused = actual_window_focus;
+// connection.refresh_metadata();
+// Before destroying the window or captured state:
+// connection.stop();
+```
+
+Callbacks execute through the scheduler on the application thread. The connection manager reads the current metadata and reannounces the subscription on reconnect. The scheduler handles transport and retry deadlines even while unfocused.
+
+</TabItem>
+</Tabs>
+
+Move the device and confirm that the console prints timestamps and named rates.
+For the console examples, press **Ctrl+C** to stop; embedded applications call
+their teardown hook when closing. The TypeScript helper returns that hook.
+
+## How Axis Streaming works
+
+`OpenAxisClient` delivers axis names and motion frames to an input listener.
+`OpenAxisConnectionManager` keeps that client connected and announces the desired
+axis subscription and application focus. The application's listener decides what
+the values do; no camera adapter or `NavigationSession` is involved.
+
+The axis announcement defines the order of values in subsequent frames. A frame
+contains a timestamp and one rate per announced axis. These are mapped input
+rates, not camera poses or distances in scene units.
+
+The listener saves the confirmed axis order before processing frames. Python
+callbacks run on the asyncio loop, C# callbacks on the receive task, and browser
+callbacks on the event loop. An integration that updates thread-bound application
+state dispatches that work to the application's thread.
+
+The console examples claim focus while running. An embedded integration instead
+reports its application's actual focus so Rotatrix can select the active recipient.
+
+`OpenAxisConnectionManager` reconnects if Rotatrix is unavailable or restarts,
+then reannounces the tags, subscription and focus. See
+[Application context and focus](/guide/dynamic-tags/) for context changes and
+[connection management](/reference/connection-lifecycle/) for readiness,
+retry settings and shutdown.
+
+## Interpret the values
+
+Rotatrix applies the user's axis maps before streaming. For example, a map can
+route sideways ball movement to a translation control or to a rotation control.
+The six standard names are preserved from the axis map into OpenAxis:
+
+| Axis names | Control |
+| --- | --- |
+| `tx`, `ty`, `tz` | Translation along X, Y, Z |
+| `rx`, `ry`, `rz` | Rotation about X, Y, Z |
+
+Rotatrix converts per-frame mapped deltas into rates before sending them:
+`streamed rate = mapped delta / dt`, where `dt` is the frame interval in seconds.
+Names identify controls; the Axis Streaming contract defines their values as rates.
+
+All six axes are gain-mapped **ball angular rates in radians per second**.
+`t*` denotes logical translation controls, not scene distance per second.
+For device travel, multiply each rate by the interval between `t_us` timestamps
+in seconds, then choose how that travel affects your application.
+
+When integrating rates, discard older sequence numbers and reset timing on
+motion start/end and connection changes so idle time does not become movement.
+The manager re-subscribes after reconnecting. The [Axis Streaming contract](/spec/#7-axis-streaming)
+defines axis order, units and timestamps.
+
+## Verify the stream
+
+Move the device and confirm that printed values use the announced axis names.
+Change the Rotatrix axis mapping and check that the corresponding named controls
+change. Restart Rotatrix while the example remains open; axis announcements and
+frames should resume after reconnection.
+
+For an embedded application, switch focus and confirm that input is delivered
+only when the application is the active recipient. If rates drive accumulated
+movement, pause input and reconnect: neither should produce a jump from an old
+timestamp.
+
+## Next steps
+
+Keep the callback that interprets rates in your application. Add
+[connection recovery and shutdown](/guide/connection-shutdown/) and
+[application context and focus](/guide/dynamic-tags/) when embedding it in a host.
+Use [local session logs](/guide/session-logs/) to capture SDK and application messages.
+The Navigation recipes apply only if you also opt into server-computed poses.

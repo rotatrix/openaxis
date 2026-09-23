@@ -1,0 +1,9 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { renderDocFragment } from '../../../../scripts/render-docs.mjs';
+import source from '../../../../LEGAL.md?raw';
+const { title, headings, body } = renderDocFragment({ src: 'LEGAL.md' }, source);
+---
+<StarlightPage frontmatter={{ title, description: 'Permissions and obligations for using the OpenAxis SDK.' }} headings={headings} hasSidebar>
+  <div class="sl-markdown-content" set:html={body} />
+</StarlightPage>

@@ -1,0 +1,415 @@
+---
+title: Navigation quickstart
+description: Follow Python, C#, TypeScript and C++ examples for an OpenAxis camera integration.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+import cppSource from '../../../../../examples/cpp_demo_3d_app/integration.hpp?raw';
+import SourceLink from '../../../components/SourceLink.astro';
+import DemoLanguageLinks from '../../../components/DemoLanguageLinks.astro';
+import typescriptSource from '../../../../../examples/typescript_demo_3d_app/integration.ts?raw';
+import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
+import mainSource from '../../../../../examples/python_demo_3d_app/main.py?raw';
+import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
+
+To add Rotatrix navigation, connect your application's camera and scene APIs to
+the OpenAxis SDK. Rotatrix supplies standardized navigation behavior; the native
+application displays the resulting camera pose.
+
+This walkthrough uses runnable Python, C#, TypeScript and C++ demos with the same
+seeded scene, mouse navigation, selection and editing. Each separates application state, OpenAxis adaptation and startup. Run a demo first, then follow how
+its integration answers queries, applies camera poses and displays a pivot.
+
+## Run a demo
+
+<DemoLanguageLinks />
+
+<a id="python" href="#python">Python</a> · <a id="csharp" href="#csharp">C#</a> · <a id="typescript" href="#typescript">TypeScript</a> · <a id="cpp" href="#cpp">C++</a>
+
+Start Rotatrix and run from the OpenAxis checkout root:
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+Requires Python 3.11+; Panda3D provides rendering.
+
+```sh
+python -m pip install -e py/openaxis -r examples/python_demo_3d_app/requirements.txt
+python examples/python_demo_3d_app/main.py
+```
+
+</TabItem>
+<TabItem label="C#">
+
+Requires the .NET 8 SDK or newer; raylib-cs provides rendering on Windows, Linux, and macOS.
+
+```sh
+dotnet run --project examples/csharp_demo_3d_app/OpenAxisDemo.csproj
+```
+
+</TabItem>
+<TabItem label="TypeScript">
+
+Open the [TypeScript demo 3D app](/demos/typescript-demo-3d-app.html), or run it locally:
+
+```sh
+pnpm install
+pnpm -C ts/sdk build
+pnpm -C examples/demos dev
+```
+
+Visit `http://localhost:5188/demos/typescript-demo-3d-app.html`.
+The excerpts below come directly from this app. For your own application, install `@openaxis/sdk`.
+
+</TabItem>
+<TabItem label="C++">
+
+Requires CMake 3.24+, a C++17 compiler, and desktop OpenGL. The demo uses GLFW and ImGui; CMake fetches pinned dependencies when installed packages are unavailable. Windows/MSVC is the initially validated platform.
+
+```sh
+cmake -S cpp -B cpp/build -DOPENAXIS_BUILD_TESTS=ON -DOPENAXIS_BUILD_DEMO=ON
+cmake --build cpp/build --config Release
+ctest --test-dir cpp/build -C Release --output-on-failure
+```
+
+On Windows run `cpp/build/demo/Release/openaxis_demo.exe`. A single-configuration generator places it at `cpp/build/demo/openaxis_demo`. The build copies the shared scene beside the executable.
+
+</TabItem>
+</Tabs>
+
+### Rotatrix profile
+
+The demo declares the navigation capability. Rotatrix automatically selects the
+user's shared navigation profile; no demo-specific profile import is needed.
+The `demo-3d-services` tag identifies the example but does not select its controls.
+
+### Demo controls
+
+Focus the demo. With the default shared navigation profile, hold **Win** (Windows), **Ctrl** (Mac)
+or **Super** (Linux) to orbit; **button 4** pans, and **Shift** swaps orbit/pan.
+These are Rotatrix default-profile bindings, owned by Rotatrix rather than the
+SDK or demo. Users can customize them; check Rotatrix for active mappings. Selecting an object keeps camera
+navigation active for testing selection-centric pivots.
+
+Click an object to select it; double-click or press **Enter** to edit it.
+Press **O** to toggle perspective/orthographic projection, **R** to reset the camera
+and all objects, **U** to undo an accepted edit, and **D** to toggle diagnostics. A green pivot marker appears
+when the server supplies a pivot.
+
+Left-drag pans; middle- or right-drag rotates; **Shift** swaps these actions, and the wheel zooms.
+In edit mode, left-drag translates, middle/right-drag rotates, and the wheel changes depth.
+Left-click or **Enter** accepts; right-click or **Esc** cancels and restores the object. Both deselect the object.
+The demo's additional features are covered in the recipes below.
+
+The demo connects to local Rotatrix automatically and reconnects if it restarts.
+
+
+### Demo structure and API
+
+The application owns rendering, camera, cursor, selection, picking and pivot
+drawing. Its integration supplies adapters, scheduling, connection and cleanup.
+The entry point attaches after startup and detaches before destroying the window.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+| Source | Responsibility |
+| --- | --- |
+| [application.py](/source/python_demo_3d_app/application.py/) | Native application API and rendering |
+| [integration.py](/source/python_demo_3d_app/integration.py/) | OpenAxis integration |
+| [main.py](/source/python_demo_3d_app/main.py/) | Startup and shutdown |
+
+`MyApplication` exposes `get_camera()`, `set_camera()`, `get_viewport_size()`
+and `set_pivot_marker()` for the integration to call.
+
+</TabItem>
+<TabItem label="C#">
+
+| Source | Responsibility |
+| --- | --- |
+| [MyApplication.cs](/source/csharp_demo_3d_app/MyApplication.cs/) | Native application API and rendering |
+| [MyOpenAxisIntegration.cs](/source/csharp_demo_3d_app/MyOpenAxisIntegration.cs/) | OpenAxis integration |
+| [Program.cs](/source/csharp_demo_3d_app/Program.cs/) | Startup and shutdown |
+
+`MyApplication` exposes `Camera`, `SetCamera()`, `Viewport` and `ShowPivot()`
+for the integration to call.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+| Source | Responsibility |
+| --- | --- |
+| [application.ts](/source/typescript_demo_3d_app/application.ts/) | Three.js application API, rendering and input |
+| [integration.ts](/source/typescript_demo_3d_app/integration.ts/) | OpenAxis adapters, session, connection and diagnostics |
+| [main.ts](/source/typescript_demo_3d_app/main.ts/) | Startup and shutdown |
+
+The integration's typed host interface is implemented by `MyApplication` in `application.ts`.
+Camera/object reads return OpenAxis world-space poses. `r` is a rotation vector in radians, not Euler angles.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region host') + '// #region host'.length, typescriptSource.indexOf('// #endregion host')).replace(/^ {0}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" />
+
+</TabItem>
+<TabItem label="C++">
+
+[C++ application](/source/cpp_demo_3d_app/application.cpp/) owns the scene, camera, selection, picking and edit transactions. The [C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/) defines `MyNavigationAdapter`, `MyQueryCapture`, and `MyOpenAxisIntegration`. It owns the client, manager and session; [main.cpp](/source/cpp_demo_3d_app/main.cpp/) owns startup and the GLFW event loop. The SDK supplies the `openaxis` types.
+
+</TabItem>
+</Tabs>
+
+## How the integration works
+
+The SDK handles communication and navigation requests. Integration code connects
+those requests to an application's camera and scene API. The main pieces are:
+
+| Component | Provided by | Role |
+| --- | --- | --- |
+| `OpenAxisClient` | SDK | Exchanges messages with Rotatrix over WebSocket. |
+| `NavigationSession` | SDK | Handles navigation requests, asks for scene information, and applies camera updates through the adapter. |
+| Application | Host application | Owns the camera and scene and exposes the API used by the integration. |
+| Navigation adapter | Integration | Implements the callbacks of `NavigationSession` by calling the application API. |
+| Scheduler | Integration | Queues SDK work on the application's thread, where its API can safely be called. |
+| `OpenAxisConnectionManager` | SDK | Keeps the client connected and reannounces application metadata. |
+
+The client carries the messages; the `NavigationSession` interprets the navigation requests;
+the adapter reads or changes application state. The scheduler lets the session perform that work on the application thread.
+
+A query travels from the server through the client and session to the adapter,
+which reads the application and returns scene facts. A resulting camera pose
+travels through the same components to update the native camera. The integration
+owns these components from application startup until shutdown; the connection
+manager handles reconnects during that lifetime.
+
+## Integration setup
+
+The demos implement these roles with `MyApplication`, `MyNavigationAdapter`
+and `MyApplicationScheduler`.
+At startup, `MyOpenAxisIntegration` creates the client, adapter and scheduler,
+then supplies them to a `NavigationSession`:
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The demo creates the application and integration, then starts the integration
+once the application's event loop is running. `url` is the Rotatrix WebSocket
+address, which defaults to `ws://127.0.0.1:6607`:
+
+<Code lang="python" code={mainSource.slice(mainSource.indexOf('async def main('), mainSource.indexOf("if __name__")).trim()} />
+
+<SourceLink file="python_demo_3d_app/main.py" symbol="main" />
+
+Inside `MyOpenAxisIntegration.start()`, `self.app` is the running demo and
+`self.url` is the server address:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('        app, url = self.app, self.url'), integrationSource.indexOf('        configure_logging(')).replace(/^ {8}/gm, '').trim()} />
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('        session = NavigationSession('), integrationSource.indexOf('observation=adapter.read, diagnostics=diagnostics')).replace(/^ {8}/gm, '').trim() + '\n    # Additional options omitted.\n)'} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyOpenAxisIntegration.start" />
+
+</TabItem>
+<TabItem label="C#">
+
+The demo's `Loaded` event creates `MyOpenAxisIntegration` with the running
+`MyApplication` as `app`. The constructor retains the scheduler and `NavigationSession` for
+later application events. The focused excerpt omits logging and the optional
+object and diagnostic configuration explained in recipes:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("        var client = new OpenAxisClient"), csharpSource.indexOf("        var fileLog =")).replace(/        var objects = new MyObjectAdapter\(app\);\r?\n/, '').replace(/^ {8}/gm, '').trim() + '\n' + csharpSource.slice(csharpSource.indexOf('        session = new NavigationSession('), csharpSource.indexOf('objectAdapter: objects,')).replace(/^ {8}/gm, '').trimEnd().replace(/,$/, '') + '\n    /* Additional options omitted. */);'} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyOpenAxisIntegration.MyOpenAxisIntegration" />
+
+</TabItem>
+<TabItem label="TypeScript">
+
+After creating the host, construct `new MyOpenAxisIntegration(app)` and call `integration.start()`. The constructor attaches the `NavigationSession` before networking starts. Browser callbacks share the event loop; the default scheduler defers adapter work using microtasks. This simplified setup omits the optional features explained in recipes.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('    this.client ='), typescriptSource.indexOf('// #region setup')).replace(/^ {4}/gm, '').trim() + '\n' + typescriptSource.slice(typescriptSource.indexOf('    this.session = new NavigationSession('), typescriptSource.indexOf('        objectAdapter: objects,')).replace(/^ {4}/gm, '').trimEnd() + '\n    // Object and diagnostics options omitted.\n  },\n);'} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyOpenAxisIntegration.constructor" />
+
+Retain the integration until teardown and await `integration.stop()` before disposing the host. A browser tab reports focus and does not send a process PID. For an integration running inside a native Node application, import `currentProcessId` from `@openaxis/sdk` and set `target.pid` to `await currentProcessId()` when constructing the client.
+
+</TabItem>
+<TabItem label="C++">
+
+The demo creates `MyOpenAxisIntegration` after its window exists. The integration constructs the camera and object adapters, uses one scheduler for the client and session, and passes the client to `NavigationSession` for automatic attachment. The following setup excerpt omits logging, object navigation and offline smoke-test options:
+
+<Code lang="cpp" code={'OpenAxisClientOptions client_options;\nclient_options.client_name = "demo 3D app (C++)";\nclient_options.scheduler = &scheduler;\nOpenAxisClient client(client_options);\nMyNavigationAdapter adapter(app);\nNavigationOptions options;\noptions.scheduler = &scheduler;\noptions.observation = [&](const NavigationContext& context) { return adapter.read_camera(context); };\nNavigationSession session(client, adapter, nullptr, options);'} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+The native demos set `target.pid` with the SDK process identity helper so Rotatrix
+can match the connection to the foreground application instance. The helper
+returns a string and includes the PID namespace on Linux, including inside Flatpak.
+See the [target declaration contract](/spec/#hello-client--server) for wire format
+and matching rules.
+
+The demos start the connection automatically and stop it when the application
+closes. See [connection recovery and shutdown](/guide/connection-shutdown/)
+when adapting that lifecycle to your application.
+
+## Adapter implementation
+
+`MyNavigationAdapter` connects the SDK's navigation operations to the demo's
+application API. It provides the methods the `NavigationSession` calls to read and update
+the camera, display a pivot, and request scene information. The demo supplies
+this adapter because the SDK does not know the application's camera or scene API.
+
+`NavigationSession` calls the adapter on the application thread to read the camera,
+apply a pose received from Rotatrix, or display a pivot. The application may
+constrain a requested camera pose. Returning the resulting pose lets
+`NavigationSession` continue navigation from the camera's actual state.
+
+The adapter's **context** keeps navigation tied to the view it started in.
+A user may switch views or close a document while a camera update is pending.
+Checking the context lets `NavigationSession` discard work for a view that is
+no longer valid, rather than applying it to whichever view is now active.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('class MyNavigationAdapter:'), integrationSource.indexOf('class MyQueryCapture:')).trim()} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyNavigationAdapter" />
+
+In `apply_camera()`, `context` is the captured application and `desired` is the
+SDK's requested `CameraPose`. `MyCamera` is the application's camera type;
+`WriteResult` reports whether the write succeeded and the resulting camera pose.
+
+</TabItem>
+<TabItem label="C#">
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("public sealed class MyNavigationAdapter"), csharpSource.indexOf("public sealed class MyQueryCapture")).trim()} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyNavigationAdapter" />
+
+In `ApplyCamera()`, `context` is the captured application and `desired` is the
+SDK's requested `CameraPoseValue`. The demo's `SetCamera()` accepts that type
+directly. `NavigationWriteResult` reports success and the resulting camera pose.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+In `MyNavigationAdapter.applyPose()`, `context` is the captured application and
+`desired` is the requested `CameraPoseValue`. `writeCamera()` reports success;
+`realizedPose` contains a copy of the resulting camera pose.
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region camera') + '// #region camera'.length, typescriptSource.indexOf('// #endregion camera')).replace(/^ {0}/gm, '').trim()} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyNavigationAdapter" />
+
+</TabItem>
+<TabItem label="C++">
+
+`MyNavigationAdapter` captures the application and edit/reset generation. Each write validates that context and returns success plus the realized pose. `MyQueryCapture` answers facts for a query; the optional observation callback reports subsequent native movement.
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('struct MyNavigationAdapter'), cppSource.indexOf('struct MyObjectCapture')).trim()} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+The demos use OpenAxis world conventions;
+your application may need [coordinate conversion](/concepts/coordinates/).
+
+## Answering scene queries
+
+Rotatrix needs information about the application's scene to calculate navigation:
+the camera's current pose, the viewport's proportions, and the geometry under
+the cursor. It requests this information through scene queries.
+
+In Python/C#/TypeScript, a **query capture** holds the camera, viewport and cursor state used to answer
+a query. `NavigationSession` obtains the capture through the adapter on the
+application thread, then asks its resolver for each requested fact. The SDK
+sends the responses to Rotatrix.
+
+The excerpts below introduce camera and orientation responses; some also include viewport responses. The complete
+implementations also answer picking and bounds queries and record diagnostics;
+those details are omitted here.
+
+<Tabs syncKey="sdk-language">
+<TabItem label="Python">
+
+The adapter's `begin_query()` passes its current camera reading to the capture.
+`resolve(name)` returns the requested value, or `UNAVAILABLE` when the demo
+cannot provide it:
+
+<Code lang="python" code={integrationSource.slice(integrationSource.indexOf('class MyQueryCapture:'), integrationSource.indexOf("        if name in ('model.bounds', 'selection.bounds'):")).replace(/        self\.diagnostics = diagnostics\r?\n|        self\.request_id = [^\n]*\n/g, '').replace('def __init__(self, app, camera, diagnostics=None):', 'def __init__(self, app, camera):').trimEnd() + '\n        # Picking and bounds responses omitted.\n        return UNAVAILABLE'} />
+
+<SourceLink file="python_demo_3d_app/integration.py" symbol="MyQueryCapture" />
+
+</TabItem>
+<TabItem label="C#">
+
+The adapter's `BeginQuery()` passes the application to the capture, which reads
+the current camera. `Resolve(name)` returns the requested value, or
+`NavigationQuery.Unavailable` when the demo cannot provide it:
+
+<Code lang="csharp" code={csharpSource.slice(csharpSource.indexOf("public sealed class MyQueryCapture"), csharpSource.indexOf('            case "model.bounds":')).trimEnd() + '\n            // Picking and bounds responses omitted.\n        }\n        return NavigationQuery.Unavailable;\n    }\n}'} />
+
+<SourceLink file="csharp_demo_3d_app/MyOpenAxisIntegration.cs" symbol="MyQueryCapture" />
+
+`Values.Camera()` converts the camera pose to the value expected by the protocol.
+
+</TabItem>
+<TabItem label="TypeScript">
+
+The adapter's `beginQuery()` creates `MyQueryCapture` with the captured application.
+`resolve(name)` returns the requested value, or `UNAVAILABLE` when it cannot
+provide it:
+
+<Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('export class MyQueryCapture'), typescriptSource.indexOf('    if (name === "model.bounds")')).trimEnd() + '\n    // Viewport, picking and bounds branches omitted.\n    return UNAVAILABLE;\n  }\n}'} />
+
+<SourceLink file="typescript_demo_3d_app/integration.ts" symbol="MyQueryCapture" />
+
+</TabItem>
+<TabItem label="C++">
+
+`MyQueryCapture` snapshots the camera when the query begins. `resolve(name)` returns each requested fact or JSON `null` when unavailable. The session memoizes facts and stops at the first available candidate. Other scene reads stay consistent because the synchronous demo does not pump native events during a query.
+
+<Code lang="cpp" code={cppSource.slice(cppSource.indexOf('struct MyQueryCapture'), cppSource.indexOf('        if (name == \"model.bounds\")')).trimEnd() + '\n        // Bounds and picking branches omitted.\n        return nullptr;\n    }\n};'} />
+
+[C++ reference integration](/source/cpp_demo_3d_app/integration.hpp/).
+
+</TabItem>
+</Tabs>
+
+The [picking recipe](/guide/picking-pivots/) covers geometry queries,
+including model and selection bounds, and the resulting pivot display.
+The [diagnostics recipe](/guide/diagnostics-logging/) shows how the
+integration records query activity.
+
+## Check the integration
+
+With the demo focused and a shared navigation profile active, use Rotatrix to
+orbit and pan. The camera should move and the scene should remain visible.
+Select a cube and navigate again to try a selection-based pivot. Then resize
+the window and switch projection with **O**; navigation should continue in both
+perspective and orthographic views.
+
+If the camera does not respond, check the connection using the
+[connection recipe](/guide/connection-shutdown/), then use
+[diagnostics](/guide/diagnostics-logging/) to inspect queries and camera writes.
+
+## Next steps
+
+Adapt the demonstrated camera and scene API calls to your application. Consult
+[coordinates](/concepts/coordinates/) when converting native camera values and
+[adapter contracts](/reference/navigation-hosts/) for exact callback requirements.
+
+Choose the follow-up that matches your next task:
+
+- **Shared by both interfaces:** [connection recovery and shutdown](/guide/connection-shutdown/),
+  [application context and focus](/guide/dynamic-tags/), and [session logs](/guide/session-logs/).
+- **Navigation features:** [verify with diagnostics](/guide/diagnostics-logging/),
+  add [picking](/guide/picking-pivots/), handle [concurrent input](/guide/concurrent-input/),
+  or implement [object editing](/guide/object-manipulation/).
+
+Use the [integration checklist](/guide/validation/) when adapting these
+application API calls to your own host.

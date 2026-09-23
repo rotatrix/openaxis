@@ -1,0 +1,30 @@
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info
+.venv/
+.venv-host/
+wheels/
+
+# Assembled site output (scripts/build-site.mjs)
+/site/
+/docs/.astro/
+/.astro/
+
+# .NET / C# build artifacts
+bin/
+obj/
+.vs/
+*.suo
+*.user
+*.pdb
+
+.DS_Store
+
+# Foreground release watcher output
+/build.log
+/.build-*
