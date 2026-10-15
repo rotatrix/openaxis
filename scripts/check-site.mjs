@@ -1,5 +1,6 @@
 // Validate the assembled static artifact, including base paths and spec anchors.
 import './check-doc-examples.mjs';
+import { runInNewContext } from 'node:vm';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,14 +15,39 @@ function files(directory) {
 const docs = files(root).filter(path => path.endsWith('.html')
   && !path.includes(`${sep}demos${sep}`));
 const errors = [];
+// Every configured legacy route must reach a real page directly, and preserve
+// incoming fragments unless the alias explicitly selects a destination section.
+const config = readFileSync(resolve(root, '../docs/astro.config.mjs'), 'utf8');
+const redirectBlock = config.match(/redirects:\s*\{([\s\S]*?)\n\s*\},/)[1];
+let redirectCount = 0;
+for (const [, oldPath, destination] of redirectBlock.matchAll(/'([^']+)':\s*'([^']+)'/g)) {
+  const html = readFileSync(resolve(root, '.' + oldPath, 'index.html'), 'utf8');
+  const target = new URL(destination, 'https://openaxis.rotatrix.com');
+  const targetHtml = readFileSync(resolve(root, '.' + target.pathname, 'index.html'), 'utf8');
+  if (targetHtml.includes('<meta http-equiv="refresh"')) errors.push(`Redirect chain: ${oldPath}`);
+  if (!html.includes(`url=${destination}`)) errors.push(`Wrong redirect: ${oldPath}`);
+  const code = html.match(/<script data-preserve-redirect>([\s\S]*?)<\/script>/)?.[1];
+  if (!code) { errors.push(`Missing fragment preservation: ${oldPath}`); continue; }
+  let actual;
+  runInNewContext(code, { URL,
+    document: { querySelector: () => ({ href: target.href }) },
+    location: { hash: '#existing-section', search: '?from=bookmark', replace: value => { actual = value; } },
+  });
+  const expected = new URL(target);
+  if (!expected.hash) expected.hash = '#existing-section';
+  if (!expected.search) expected.search = '?from=bookmark';
+  if (actual !== expected.href) errors.push(`Lost bookmark location: ${oldPath}`);
+  redirectCount++;
+}
+console.log(`Verified ${redirectCount} direct legacy redirects with fragment and query preservation.`);
 for (const file of ['OpenAxisDemo.csproj', 'Program.cs', 'MyApplication.cs', 'MyOpenAxisIntegration.cs', 'DemoTests.cs', 'README.md']) {
   if (!existsSync(resolve(root, 'examples/csharp_demo_3d_app', file))) {
     errors.push(`Missing C# demo 3D app file: ${file}`);
   }
 }
-for (const path of ['guide/navigation-integration', 'guide/connection-shutdown', 'guide/dynamic-tags', 'guide/picking-pivots',
-  'guide/concurrent-input', 'guide/object-manipulation', 'guide/diagnostics-logging',
-  'guide/axis-streaming', 'guide/asynchronous-hosts', 'reference/navigation-hosts',
+for (const path of ['getting-started/walkthrough', 'guide/connection-shutdown', 'guide/dynamic-tags', 'guide/picking-pivots',
+  'guide/concurrent-input', 'guide/object-manipulation', 'guide/diagnostics',
+  'getting-started/axis-streaming', 'guide/asynchronous-hosts', 'reference/navigation-hosts',
   'reference/connection-lifecycle', 'reference/language-support']) {
   const html = readFileSync(resolve(root, path, 'index.html'), 'utf8');
   if (!html.includes('data-sync-key="sdk-language"') || !/role="tab"[^>]*>\s*C#\s*</.test(html)) {

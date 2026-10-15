@@ -122,6 +122,22 @@ Keep language-independent explanations outside synchronized language tabs. Use
 `Python`, `C#`, `TypeScript` and `C++` consistently, and describe unsupported
 operations explicitly. Distinguish UI recommendations from protocol requirements.
 
+## Page locations
+
+Use `/getting-started/` for the introductory reading path, `/guide/` for
+implementation tasks, `/concepts/` for explanations, and `/reference/` for exact
+contracts. `/recommendations/` holds recommendations and tradeoffs that integrations can
+adapt to their host. State clearly when advice is a recommendation rather than a
+protocol or SDK requirement. Contributor workflows belong under `/contributing/`.
+
+These sections organize reader needs; they do not require every page to be a
+tutorial. A runnable example supplies working source, a walkthrough explains it,
+and a recipe guides a specific task and its verification.
+
+When moving a published page, update internal and repository links and add a
+direct redirect in the site configuration. Preserve heading anchors and retain
+old redirects so bookmarked pages and sections continue to work.
+
 ## Before publishing
 
 - Read the page in order and remove repetition across sections.

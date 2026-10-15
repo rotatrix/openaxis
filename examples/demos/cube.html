@@ -130,7 +130,7 @@
     });
     const cancelGesture = () => session.contextChanged();
     const fm = manageFocus(client, {
-      metadata: () => ({ tags: ["interaction.object.transform"], capabilities: ["navigation"] }),
+      metadata: () => ({ tags: ["demo-cube"], capabilities: ["navigation"] }),
       onState: updateHUD,
       onPauseChange(paused) { updateHUD.setPaused(paused); if (paused) cancelGesture(); },
     });

@@ -8,7 +8,7 @@ The shared presentation model described here is available in Python, C#, TypeScr
 Diagnostic renderers must preserve the evidence supplied by the SDK so developers
 can verify the same integration behavior in different applications. The SDK
 supplies presentation data; the application renderer maps it to native graphics.
-See the [diagnostics recipe](/guide/diagnostics-logging/) for runnable wiring.
+See the [diagnostics recipe](/guide/diagnostics/) for runnable wiring.
 
 ## Required behavior
 
@@ -48,7 +48,7 @@ do not establish provenance.
 Use a small, approximately constant screen-size crosshair: about a **9 logical
 pixel radius**, **2-pixel stroke**, with its label about **12 pixels to the right
 and 8 pixels above** the sample. These are visual guidelines; no new SDK style API
-is required. Fonts, font metrics and panel placement may follow the application.
+is required. Fonts, font metrics and viewport overlay placement may follow the application.
 Keep labels readable against both light and dark backgrounds.
 
 The SDK combines samples at the same position with the same tone into one marker
@@ -64,8 +64,10 @@ Convert the integration's marker coordinates to native display coordinates.
 Screen-marker dimensions are logical display pixels; account for DPI separately
 and do not scale a position twice.
 
-If an application cannot render part of the presentation, document that limitation
-and retain the evidence in its diagnostic panel. For example, Onshape shows text
+Draw supplied text rows and graphics directly in the viewport. If the host cannot
+adequately draw part of the information there, use a small companion panel for
+that portion. Document rendering limitations and retain
+the corresponding evidence in the diagnostic presentation. For example, Onshape shows text
 and 2D markers because its integration has no transient 3D overlay. A limitation
 must not silently turn a missing visual into an unavailable fact.
 
@@ -78,4 +80,4 @@ turn diagnostics off: no stale graphics should remain. These native visual check
 complement the SDK tests of presentation data.
 
 The normal camera/object pivot is a separate visual from diagnostic crosshairs.
-Follow [pivot marker appearance](/experience/pivots-diagnostics/#pivot-marker-appearance).
+Follow [pivot marker appearance](/recommendations/pivot-appearance/#pivot-marker-appearance).

@@ -5,6 +5,8 @@ description: Establish a fast edit, reload and test loop for an application inte
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
+Applies to **Navigation and Axis Streaming**.
+
 I strongly recommend adding a development reload path early when building an
 OpenAxis integration. Restarting a large CAD or 3D application for each camera
 adapter change slows down the native testing that integration work needs. A
@@ -26,7 +28,7 @@ interrupted. Add file watching only after this explicit reload path works reliab
 Keep the edit loop short: edit the adapter, build or copy the changed files if
 needed, reload, then repeat the same navigation action in the same scene. Show
 the loaded build or source location in development logs so you can confirm that
-you are testing the intended code. See [diagnostics and logging](/guide/diagnostics-logging/)
+you are testing the intended code. See [diagnostics and logging](/guide/diagnostics/)
 for inspecting navigation behavior.
 
 ## Stop, replace and restart the integration

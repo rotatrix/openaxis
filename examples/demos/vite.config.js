@@ -25,7 +25,6 @@ export default defineConfig(({ command }) => ({
         basic: resolve(__dirname, "basic.html"),
         cube: resolve(__dirname, "cube.html"),
         skybox: resolve(__dirname, "skybox.html"),
-        splats: resolve(__dirname, "splats.html"),
         sketchfab: resolve(__dirname, "sketchfab.html"),
         "se2-2d": resolve(__dirname, "se2-2d.html"),
         "se2-3d": resolve(__dirname, "se2-3d.html"),

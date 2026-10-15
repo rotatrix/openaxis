@@ -21,9 +21,9 @@ for supported environments and versioning.
 
 The [documentation](https://openaxis.rotatrix.com/) explains the two interfaces
 and guides you through building an integration. Start with the
-[Navigation quickstart](https://openaxis.rotatrix.com/guide/navigation-quickstart/)
+[Navigation quickstart](https://openaxis.rotatrix.com/getting-started/quickstart/)
 for a 3D application, or the
-[Axis Streaming quickstart](https://openaxis.rotatrix.com/guide/axis-streaming/)
+[Axis Streaming quickstart](https://openaxis.rotatrix.com/getting-started/axis-streaming/)
 for application-defined input behavior.
 
 Use [SDK installation](https://openaxis.rotatrix.com/guide/sdk-installation/)

@@ -19,11 +19,10 @@ Blur/pause cancels the current gesture. Page-cache suspension preserves the
 scene; final shutdown closes the session and disposes rendering resources.
 
 Run `pnpm dev` here and open `/demos/cube.html`. Start Rotatrix to use
-device input. The navigation capability and `interaction.object.transform` tag
-select the user's shared navigation profile. With the default controls, rotate
-the ball to rotate the cube, hold Shift to translate, and press button 3 to toggle
-world snapping. Camera controls temporarily suspend object input; this demo keeps
-its camera fixed. `pnpm test` includes `cube.test.mjs`, which exercises the real scene,
+device input. The `demo-cube` tag selects the Cube branch of Rotatrix's
+`openaxis_demos` profile. Rotate the ball to rotate the cube, hold button 2 or
+Shift to translate, and hold button 1 for rate mode. The camera stays fixed.
+`pnpm test` includes `cube.test.mjs`, which exercises the real scene,
 session and connection manager with a simulated transport.
 
 For a manual check, move and rotate the cube, pause/resume, and leave/return

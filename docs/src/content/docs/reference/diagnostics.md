@@ -8,7 +8,7 @@ The collector/presentation contract is implemented in Python, C#, TypeScript and
 `NavigationDiagnostics` collects the facts and writes used by a navigation
 session so you can verify the integration independently of server navigation
 policy. It supplies logs and presentation data; your application draws the data.
-For runnable wiring, use the [diagnostics recipe](/guide/diagnostics-logging/).
+For runnable wiring, use the [diagnostics recipe](/guide/diagnostics/).
 
 Import `NavigationDiagnostics` and `COLORS` from Python's
 `openaxis.navigation_diagnostics`, or use C#'s `OpenAxis.Diagnostics` namespace.

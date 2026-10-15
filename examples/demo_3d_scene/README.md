@@ -33,7 +33,7 @@ explains how the preference and translation-distance fact affect navigation.
 ## Visual feedback
 
 Camera and object pivots follow the shared
-[pivot appearance guidance](https://openaxis.rotatrix.com/experience/pivots-diagnostics/).
+[pivot appearance guidance](https://openaxis.rotatrix.com/recommendations/pivot-appearance/).
 Diagnostic overlays follow the
 [rendering contract](https://openaxis.rotatrix.com/reference/diagnostic-rendering/).
 Keep dimensions, depth behavior and palette specifications in those pages.

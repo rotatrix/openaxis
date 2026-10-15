@@ -65,6 +65,8 @@ awaits its `close()` method:
 ```ts
 import { AsyncNavigationSession } from "@openaxis/sdk";
 
+Applies to **Navigation**.
+
 const session = new AsyncNavigationSession(client, cameraAdapter, {
   observation: context => readCamera(context),
   objectAdapter,
@@ -112,4 +114,4 @@ cannot retract an issued remote write. Native input can occur between a read and
 write; some glitches remain possible. Closing waits for issued adapter work.
 
 For C#, validate deferred application-thread dispatch, synchronous write readback
-and context invalidation using the [Navigation integration guide](/guide/navigation-integration/).
+and context invalidation using the [Integration walkthrough](/getting-started/walkthrough/).

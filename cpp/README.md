@@ -17,7 +17,7 @@ checkout APIs may be newer than published packages.
 
 ## Documentation
 
-- [Navigation quickstart and runnable demos](https://openaxis.rotatrix.com/guide/navigation-quickstart/#cpp)
+- [Navigation quickstart and runnable demos](https://openaxis.rotatrix.com/getting-started/quickstart/#cpp)
 - [Adapter contracts](https://openaxis.rotatrix.com/reference/navigation-hosts/)
 - [Language support and current gaps](https://openaxis.rotatrix.com/reference/language-support/)
 

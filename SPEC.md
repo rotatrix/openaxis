@@ -883,7 +883,7 @@ relative to `world.orientation.up`.
 translation remain parallel to the ground plane perpendicular to that up
 direction. They are user preferences, not authoritative constraints. For
 refreshing facts after native preference changes, see
-[Settings and controls](docs/src/content/docs/experience/settings.md).
+[Settings and controls](docs/src/content/docs/recommendations/settings-and-controls.md).
 
 `document.id` is intentionally not a revision or epoch. When it changes, the
 server clears document-scoped state such as last-used and locked camera pivots.
@@ -1154,7 +1154,7 @@ Pivot feedback uses the authoritative point from `camera.pivot` or `object.pivot
 Pose application must not depend on the ability to render feedback.
 
 Marker appearance, depth behavior, sizing, and lifecycle guidance are maintained
-in the [SDK visual-feedback guide](docs/src/content/docs/experience/pivots-diagnostics.md#pivot-marker-appearance).
+in the [SDK visual-feedback guide](docs/src/content/docs/recommendations/pivot-appearance.md#pivot-marker-appearance).
 These are integration presentation recommendations, not wire-protocol requirements.
 
 ## 9. Commands and button state
@@ -1193,7 +1193,7 @@ added without changing the RPC envelope.
 This preserves the compact virtual-button bitmask for clients that consume
 button state. Bit 0 is virtual button 1. For choosing named commands versus
 virtual buttons in a new integration, see
-[Migration guidance](docs/src/content/docs/reference/migration-1-0.md#application-actions).
+[Migration guidance](docs/src/content/docs/guide/migrate-to-1-0.md#application-actions).
 
 ## 10. Extensibility and name handling
 
@@ -1365,7 +1365,7 @@ Draft 0.2 and 1.0 are not wire-compatible. Clients MUST use the
 `openaxis/1.0` protocol identifier and the 1.0 message contracts.
 
 For the full change list and migration guidance, see
-[Migrating from 0.2 to 1.0](/reference/migration-1-0/).
+[Migrating from 0.2 to 1.0](/guide/migrate-to-1-0/).
 
 ---
 

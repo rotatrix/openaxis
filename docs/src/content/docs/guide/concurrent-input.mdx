@@ -10,12 +10,14 @@ import typescriptSource from '../../../../../examples/typescript_demo_3d_app/int
 import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
 import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
 
+Applies to **Navigation**.
+
 A camera can move through mouse input or application constraints while Rotatrix
 is navigating. If Rotatrix continues from an outdated pose, its next update can
 undo that movement. `NavigationSession` uses camera observations and write readback
 to keep Rotatrix aligned with the application's actual state.
 
-The [demos](/guide/navigation-quickstart/) demonstrate this with simultaneous
+The [demos](/getting-started/quickstart/) demonstrate this with simultaneous
 mouse and Rotatrix input. The same mechanism applies to object edits.
 
 ## Try it
@@ -96,7 +98,7 @@ height. The adapter returns the resulting pose so `NavigationSession` can correc
 Rotatrix's state and continue from the constrained position.
 
 The `NavigationSession` calls **MyNavigationAdapter** on the application thread to apply a pose.
-The [complete adapter](/guide/navigation-integration/#adapter-implementation)
+The [complete adapter](/getting-started/walkthrough/#adapter-implementation)
 shows how it captures the application and reads its camera.
 
 <Tabs syncKey="sdk-language">

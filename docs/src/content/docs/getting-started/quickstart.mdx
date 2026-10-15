@@ -1,0 +1,116 @@
+---
+title: Quickstart
+description: Run an OpenAxis demo and try camera and object navigation with Rotatrix.
+---
+
+Run a demo to try Rotatrix camera and object controls. Start with the hosted
+browser demo, or run a local demo in the language you intend to use. All four
+language demos share the same scene and controls.
+
+## Before you start
+
+For device input, connect a Rotatrix device and start the Rotatrix desktop app.
+See [Rotatrix compatibility](/reference/language-support/#rotatrix-compatibility)
+for the required version. Keep the desktop app running while you use the demo.
+You can also explore the scene with mouse controls without a device.
+
+## Open the browser demo
+
+[Open the hosted demo](/demos/typescript-demo-3d-app.html) in a browser with WebGL.
+No build tools are needed. Continue to [Controls](#controls).
+
+## Run a demo locally
+
+<span id="run-a-demo"></span>
+
+To build a local demo, obtain a [source checkout](/guide/sdk-installation/#source-checkouts)
+and install Node 22.12 or newer and the pnpm version declared in package.json.
+Install the additional tools for your chosen language:
+
+| Demo | Additional requirements | Build and platform details |
+| --- | --- | --- |
+| <span id="typescript">Browser (TypeScript)</span> | A browser with WebGL | [TypeScript README](/examples/typescript_demo_3d_app/README.md) |
+| <span id="python">Python</span> | uv, the Python environment manager; the launcher prepares Python 3.11 and dependencies | [Python README](/examples/python_demo_3d_app/README.md) |
+| <span id="cpp">C++</span> | CMake 3.24+, a C++17 compiler and desktop OpenGL | [C++ README](/examples/cpp_demo_3d_app/README.md) |
+| <span id="csharp">C#</span> | .NET 8 SDK or newer | [C# README](/examples/csharp_demo_3d_app/README.md) |
+
+From the OpenAxis checkout root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm demo
+```
+
+Choose **1 Browser**, **2 Python**, **3 C++**, or **4 C#**. The launcher builds and
+starts the demo; the browser choice opens a local URL. Enter **q** to stop it.
+The Rotatrix desktop app runs separately.
+
+<span id="rotatrix-profile"></span>
+<span id="demo-controls"></span>
+
+## Controls
+
+Rotatrix automatically selects its navigation control configuration, called a
+profile. You do not need to import a profile for the demo. The Rotatrix controls below are
+the profile defaults; if you have customized them, check your assigned controls in Rotatrix.
+
+The demo connects to Rotatrix automatically and reconnects if it restarts.
+Click inside the demo so it receives input.
+
+<dl>
+  <dt id="navigate-with-rotatrix">Navigate with Rotatrix</dt>
+  <dd>
+
+Hold **Win** (Windows), **Ctrl** (Mac), or **Super** (Linux) while moving the ball
+to orbit around the model. **Button 4** pans, and **Shift** swaps orbit and pan.
+Orbit rotates the viewpoint around a pivot; pan moves it sideways or up and down.
+The scene should remain visible as you move.
+
+  </dd>
+  <dt id="navigate-with-a-mouse">Navigate with a mouse</dt>
+  <dd>
+
+Left-drag pans; middle- or right-drag rotates. **Shift** swaps these actions,
+and the wheel zooms.
+
+  </dd>
+  <dt id="change-the-display">Change the display</dt>
+  <dd>
+
+Press **O** to switch between perspective (distant objects appear smaller) and
+orthographic (size does not diminish with distance). Navigation should work in
+both and after resizing the window. **R** resets the camera and all objects.
+
+Press **D** to toggle diagnostics: an overlay showing scene information and
+camera updates used during navigation. A green marker shows the pivot when
+Rotatrix supplies one.
+
+  </dd>
+  <dt id="select-and-edit-objects">Select and edit objects</dt>
+  <dd>
+
+Click an object to select it. Camera navigation remains active, so you can try
+orbiting with that selection. Double-click or press **Enter** to edit it.
+
+In edit mode, left-drag moves the object, middle/right-drag rotates it, and the
+wheel changes depth. Left-click or **Enter** accepts; right-click or **Esc**
+cancels and restores the object. Both deselect it. **U** undoes an accepted edit.
+See the [object editing recipe](/guide/object-manipulation/) for integration details.
+
+  </dd>
+  <dt id="if-nothing-moves">If nothing moves</dt>
+  <dd>
+
+Confirm Rotatrix is running, the demo receives input, and the active profile has
+the expected controls. Then check the [connection](/guide/connection-shutdown/)
+and use [diagnostics](/guide/diagnostics/) to inspect scene information and updates.
+
+  </dd>
+</dl>
+
+<span id="how-navigation-works"></span>
+
+## Build your integration
+
+Continue with the [Integration walkthrough](/getting-started/walkthrough/) to
+understand how the demo connects the SDK to camera and scene APIs.

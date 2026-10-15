@@ -4,8 +4,12 @@ description: Essential implementation and native validation checks.
 ---
 
 
-Use this checklist after migrating your application to the OpenAxis SDK to
-validate its geometry, input and lifecycle behavior.
+This checklist covers **Navigation** integrations.
+
+Use this checklist during [integration planning](/getting-started/planning/)
+and when validating behavior in the application. Record evidence for each
+applicable item and explain exclusions in the integration notes. Keep automated
+results and manual or physical-device checks distinct.
 
 ## Implementation
 
@@ -36,4 +40,4 @@ Automated commands and coverage live in the demo READMEs:
 physical-device input still require the application checks above.
 
 For a failure, retain application/SDK versions, projection, viewport size and the failing
-step, plus the actual pick or requested/realized pose from [diagnostics](/guide/diagnostics-logging/).
+step, plus the actual pick or requested/realized pose from [diagnostics](/guide/diagnostics/).

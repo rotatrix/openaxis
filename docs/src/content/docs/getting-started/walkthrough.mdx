@@ -1,5 +1,5 @@
 ---
-title: Navigation integration guide
+title: Integration walkthrough
 description: Connect your application APIs to OpenAxis Navigation using Python, C#, TypeScript or C++.
 ---
 
@@ -11,16 +11,43 @@ import integrationSource from '../../../../../examples/python_demo_3d_app/integr
 import mainSource from '../../../../../examples/python_demo_3d_app/main.py?raw';
 import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
 
-To add Rotatrix navigation, connect your application's camera and scene APIs to
-the OpenAxis SDK. Your integration can live in a plugin or in the application's
-own code. Rotatrix computes navigation; your application applies the resulting
-poses and renders the scene.
+This walkthrough covers the **Navigation** interface for camera and object control.
 
 This guide follows the Python, C#, TypeScript and C++ reference integrations.
-Start with the [Navigation quickstart](/guide/navigation-quickstart/) to run a
+Start with the [Quickstart](/getting-started/quickstart/) to run a
 demo and try its controls, then use the matching language tab below to follow
 its implementation. See [SDK installation](/guide/sdk-installation/) for adding
 the SDK to your own project.
+
+## How the integration works
+
+The SDK handles communication and navigation requests. Integration code connects
+those requests to an application's camera and scene API. The main pieces are:
+
+| Component | Provided by | Role |
+| --- | --- | --- |
+| `OpenAxisClient` | SDK | Exchanges messages with Rotatrix over WebSocket. |
+| `NavigationSession` | SDK | Handles navigation requests, asks for scene information, and applies camera updates through the adapter. |
+| Application | Host application | Owns the camera and scene and exposes the API used by the integration. |
+| Navigation adapter | Integration | Implements the callbacks of `NavigationSession` by calling the application API. |
+| Scheduler | Integration | Queues SDK work on the application's thread, where its API can safely be called. |
+| `OpenAxisConnectionManager` | SDK | Keeps the client connected and reannounces application metadata. |
+
+The client carries the messages; the `NavigationSession` interprets the navigation requests;
+the adapter reads or changes application state. The scheduler lets the session perform that work on the application thread.
+
+A query travels from the server through the client and session to the adapter,
+which reads the application and returns scene facts. A resulting camera pose
+travels through the same components to update the native camera. The integration
+owns these components from application startup until shutdown; the connection
+manager handles reconnects during that lifetime.
+
+A **query capture** holds the application state used to answer one set of scene
+questions consistently. The adapter supplies it when a query begins; the
+[scene-query section](#answering-scene-queries) shows its implementation.
+
+Picking finds geometry at a screen position. Model and selection bounds describe
+the spatial extents of all geometry and the selected geometry, respectively.
 
 ## Demo structure and API
 
@@ -61,7 +88,7 @@ for the integration to call.
 | [integration.ts](/source/typescript_demo_3d_app/integration.ts/) | OpenAxis adapters, session, connection and diagnostics |
 | [main.ts](/source/typescript_demo_3d_app/main.ts/) | Startup and shutdown |
 
-The integration's typed host interface is implemented by `MyApplication` in `application.ts`.
+The TypeScript interface below lists the application operations the integration calls. `MyApplication` implements them in `application.ts`.
 Camera/object reads return OpenAxis world-space poses. `r` is a rotation vector in radians, not Euler angles.
 
 <Code lang="typescript" code={typescriptSource.slice(typescriptSource.indexOf('// #region host') + '// #region host'.length, typescriptSource.indexOf('// #endregion host')).replace(/^ {0}/gm, '').trim()} />
@@ -75,29 +102,6 @@ Camera/object reads return OpenAxis world-space poses. `r` is a rotation vector 
 
 </TabItem>
 </Tabs>
-
-## How the integration works
-
-The SDK handles communication and navigation requests. Integration code connects
-those requests to an application's camera and scene API. The main pieces are:
-
-| Component | Provided by | Role |
-| --- | --- | --- |
-| `OpenAxisClient` | SDK | Exchanges messages with Rotatrix over WebSocket. |
-| `NavigationSession` | SDK | Handles navigation requests, asks for scene information, and applies camera updates through the adapter. |
-| Application | Host application | Owns the camera and scene and exposes the API used by the integration. |
-| Navigation adapter | Integration | Implements the callbacks of `NavigationSession` by calling the application API. |
-| Scheduler | Integration | Queues SDK work on the application's thread, where its API can safely be called. |
-| `OpenAxisConnectionManager` | SDK | Keeps the client connected and reannounces application metadata. |
-
-The client carries the messages; the `NavigationSession` interprets the navigation requests;
-the adapter reads or changes application state. The scheduler lets the session perform that work on the application thread.
-
-A query travels from the server through the client and session to the adapter,
-which reads the application and returns scene facts. A resulting camera pose
-travels through the same components to update the native camera. The integration
-owns these components from application startup until shutdown; the connection
-manager handles reconnects during that lifetime.
 
 ## Integration setup
 
@@ -224,7 +228,7 @@ In `MyNavigationAdapter.applyPose()`, `context` is the captured application and
 </TabItem>
 <TabItem label="C++">
 
-`MyNavigationAdapter` captures the application and edit/reset generation. Each write validates that context and returns success plus the realized pose. `MyQueryCapture` answers facts for a query; the optional observation callback reports subsequent native movement.
+`MyNavigationAdapter` captures the application and tracks whether an edit or reset has invalidated it. Each write checks that the target is still valid and returns success plus the resulting pose. `MyQueryCapture` answers scene questions; the optional observation callback reports later camera movement from native input.
 
 <Code lang="cpp" code={cppSource.slice(cppSource.indexOf('struct MyNavigationAdapter'), cppSource.indexOf('struct MyObjectCapture')).trim()} />
 
@@ -289,7 +293,7 @@ provide it:
 </TabItem>
 <TabItem label="C++">
 
-`MyQueryCapture` snapshots the camera when the query begins. `resolve(name)` returns each requested fact or JSON `null` when unavailable. The session memoizes facts and stops at the first available candidate. Other scene reads stay consistent because the synchronous demo does not pump native events during a query.
+`MyQueryCapture` snapshots the camera when the query begins. `resolve(name)` returns each requested fact or JSON `null` when unavailable. The session reuses each fact within the query and stops at the first available candidate. Other scene reads stay consistent because the synchronous demo does not pump native events during a query.
 
 <Code lang="cpp" code={cppSource.slice(cppSource.indexOf('struct MyQueryCapture'), cppSource.indexOf('        if (name == \"model.bounds\")')).trimEnd() + '\n        // Bounds and picking branches omitted.\n        return nullptr;\n    }\n};'} />
 
@@ -300,33 +304,11 @@ provide it:
 
 The [picking recipe](/guide/picking-pivots/) covers geometry queries,
 including model and selection bounds, and the resulting pivot display.
-The [diagnostics recipe](/guide/diagnostics-logging/) shows how the
+The [diagnostics recipe](/guide/diagnostics/) shows how the
 integration records query activity.
-
-## Check the integration
-
-In your application, verify that orbit and pan move the camera in the expected
-direction. Test perspective and orthographic views where supported, resize the
-viewport, and confirm that closing or replacing it stops writes to the old target.
-Use the [integration checklist](/guide/validation/) for the full host checks.
-
-If the camera does not respond, check the connection using the
-[connection recipe](/guide/connection-shutdown/), then use
-[diagnostics](/guide/diagnostics-logging/) to inspect queries and camera writes.
 
 ## Next steps
 
-Adapt the demonstrated camera and scene API calls to your application. Consult
-[coordinates](/concepts/coordinates/) when converting native camera values and
-[adapter contracts](/reference/navigation-hosts/) for exact callback requirements.
-
-Choose the follow-up that matches your next task:
-
-- **Shared by both interfaces:** [connection recovery and shutdown](/guide/connection-shutdown/),
-  [application context and focus](/guide/dynamic-tags/), and [session logs](/guide/session-logs/).
-- **Navigation features:** [verify with diagnostics](/guide/diagnostics-logging/),
-  add [picking](/guide/picking-pivots/), handle [concurrent input](/guide/concurrent-input/),
-  or implement [object editing](/guide/object-manipulation/).
-
-Use the [integration checklist](/guide/validation/) when adapting these
-application API calls to your own host.
+Continue with [Planning a new integration](/getting-started/planning/) to choose
+features for your application, assess its native APIs, and decide how to verify
+the result.

@@ -134,7 +134,7 @@ notifications.
 The Python/C#/TypeScript prose formatter vocabulary is separate: for example,
 `gesture_started` maps to formatter name `gesture.start`, and a `fact` maps to
 `navigation.fact`. Formatter names are not automatically emitted observer
-events. See [diagnostics and logging](/guide/diagnostics-logging/) for a
+events. See [diagnostics and logging](/guide/diagnostics/) for a
 concrete mapping and the unified C# assembly location.
 
 ## C++ events

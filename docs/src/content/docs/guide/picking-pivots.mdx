@@ -10,11 +10,13 @@ import typescriptSource from '../../../../../examples/typescript_demo_3d_app/int
 import integrationSource from '../../../../../examples/python_demo_3d_app/integration.py?raw';
 import csharpSource from '../../../../../examples/csharp_demo_3d_app/MyOpenAxisIntegration.cs?raw';
 
+Applies to **Navigation**.
+
 A pivot is the point around which navigation rotates. Rotatrix chooses it using
 scene information supplied by the application: a pick locates geometry under a
 screen position, and bounds describe the extent of a model or selection.
 
-The [demos](/guide/navigation-quickstart/) answer those geometry queries and
+The [demos](/getting-started/quickstart/) answer those geometry queries and
 display the pivot returned by Rotatrix. The integration supplies facts;
 Rotatrix's navigation policy decides which fact to use.
 
@@ -22,7 +24,7 @@ Rotatrix's navigation policy decides which fact to use.
 
 Run the demo, press **D**, then navigate over a cube and empty space. Click to
 select a cube and repeat. Compare reported hits and bounds with the scene. A green
-marker shows the server-supplied pivot using the [shared disc appearance](/experience/pivots-diagnostics/#pivot-marker-appearance).
+marker shows the server-supplied pivot using the [shared disc appearance](/recommendations/pivot-appearance/#pivot-marker-appearance).
 
 ![C++ demo diagnostics showing a 2D crosshair at the picked screen position, a 3D crosshair at the surface hit on a green cube, and the matching yellow pick.cursor result row.](/screenshots/cpp-pick-diagnostics.png)
 
@@ -56,7 +58,7 @@ for exact result values and low-level listener behavior.
 <TabItem label="Python">
 
 The `NavigationSession` calls `MyQueryCapture.resolve(self, name)` with a requested fact name.
-The [integration guide's query overview](/guide/navigation-integration/#answering-scene-queries)
+The [integration guide's query overview](/getting-started/walkthrough/#answering-scene-queries)
 shows how its constructor saves `self.app`, `self.camera`, viewport dimensions and
 cursor. The resolver uses that saved state to answer each request.
 `bounds_value()` converts application bounds to minimum and maximum world-space
@@ -193,7 +195,7 @@ The point belongs to the captured viewport; `undefined` clears the marker.
 </TabItem>
 <TabItem label="C++">
 
-`pivot(std::optional<Vec3>)` stores or clears the green camera marker and updates the application's orbit target when present. The SDK clears it on retirement. The demo also implements `object_pivot` and draws both using the [standard marker](/experience/pivots-diagnostics/#pivot-marker-appearance). Its SDK diagnostic collector supplies the separate subdued labeled pick crosshairs and bounds.
+`pivot(std::optional<Vec3>)` stores or clears the green camera marker and updates the application's orbit target when present. The SDK clears it on retirement. The demo also implements `object_pivot` and draws both using the [standard marker](/recommendations/pivot-appearance/#pivot-marker-appearance). Its SDK diagnostic collector supplies the separate subdued labeled pick crosshairs and bounds.
 
 <Code lang="cpp" code={cppSource.slice(cppSource.indexOf('    void show_pivot('), cppSource.indexOf('\n};', cppSource.indexOf('    void show_pivot('))).replace(/^ {4}/gm, '').trim()} />
 
@@ -202,7 +204,7 @@ The point belongs to the captured viewport; `undefined` clears the marker.
 </TabItem>
 </Tabs>
 
-See [pivot display guidance](/experience/pivots-diagnostics/) when adapting
+See [pivot display guidance](/recommendations/pivot-appearance/) when adapting
 the display to your application.
 
 ## Verification

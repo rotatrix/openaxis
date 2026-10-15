@@ -133,7 +133,7 @@ test('blur and pause invalidate output; reconnect restores metadata', async t =>
   assert.equal(d.run('fm.isPaused()'), true);
   d.dispatch('click', {}); await d.settled();
   assert.equal(d.run('fm.lifecycle.state'), 'ready');
-  assert.deepEqual(d.client.tags, ['interaction.object.transform']);
+  assert.deepEqual(d.client.tags, ['demo-cube']);
   assert.equal(d.client.messages.filter(m => m.type === 'focus').at(-1).focused, true);
 });
 
